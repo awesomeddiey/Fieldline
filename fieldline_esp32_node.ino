@@ -1,6 +1,6 @@
 /*
-  Zolve soil node — ESP32 + 7-in-1 RS485 soil sensor (N, P, K, pH, EC, moisture, temp)
-  + DHT22 for air temp / humidity. Serves JSON over LAN for the Zolve dashboard.
+  Fieldline soil node — ESP32 + 7-in-1 RS485 soil sensor (N, P, K, pH, EC, moisture, temp)
+  + DHT22 for air temp / humidity. Serves JSON over LAN for the Fieldline dashboard.
 
   Endpoints:
     GET  http://<ip>/data   -> JSON snapshot (CORS enabled)
@@ -20,7 +20,7 @@
 
 const char* WIFI_SSID = "YOUR_WIFI";
 const char* WIFI_PASS = "YOUR_PASSWORD";
-const char* HOSTNAME  = "zolve-node";     // reachable as zolve-node.local on most LANs
+const char* HOSTNAME  = "fieldline-node";     // reachable as fieldline-node.local on most LANs
 
 #define RS485_DE 4
 #define DHT_PIN  15
@@ -83,7 +83,7 @@ void setup() {
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
   server.on("/data", HTTP_GET, [](AsyncWebServerRequest* r) { r->send(200, "application/json", snapshot()); });
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest* r) { r->send(200, "text/plain", "Zolve node OK. GET /data"); });
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest* r) { r->send(200, "text/plain", "Fieldline node OK. GET /data"); });
   server.addHandler(&ws);
   server.begin();
 }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Zolve · Soil Intelligence</title>
+<title>Fieldline</title>
 <style>
 :root{
   --ink:#101311; --ink2:#3a4540; --mute:#7a857f; --line:rgba(16,19,17,.08);
@@ -167,7 +167,7 @@ body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg
 
 <div class="frame"><div class="screen">
   <header class="bar">
-    <div class="logo"><svg viewBox="0 0 24 24" fill="none"><path d="M3 14c4-8 10-9 18-9-1 8-6 13-14 13H3v-4z" fill="#9fcf2e"/><path d="M3 18c3-4 7-7 13-9" stroke="#2f5d1a" stroke-width="1.6" stroke-linecap="round"/></svg>zolve</div>
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none"><path d="M3 14c4-8 10-9 18-9-1 8-6 13-14 13H3v-4z" fill="#9fcf2e"/><path d="M3 18c3-4 7-7 13-9" stroke="#2f5d1a" stroke-width="1.6" stroke-linecap="round"/></svg>fieldline</div>
     <nav class="nav"><b>My fields</b><span>Analytics</span><span>Settings</span></nav>
     <div class="search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input placeholder="Search"></div>
     <button class="btn">Upgrade</button>
@@ -175,7 +175,7 @@ body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg
       <div class="pop" id="pop">
         <div style="font-weight:600;font-size:13.5px">ESP32 connection</div>
         <label>Device address on LAN</label>
-        <input id="ip" placeholder="192.168.1.50  or  zolve-node.local" value="192.168.1.50">
+        <input id="ip" placeholder="192.168.1.50  or  fieldline-node.local" value="192.168.1.50">
         <label>Poll interval (ms)</label>
         <input id="ms" type="number" value="2000" min="500">
         <div class="r"><button class="btn" id="connect">Connect</button><button class="btn ghost" id="demo">Demo</button></div>
@@ -194,7 +194,7 @@ body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg
         <div class="thumb add">＋<span>Add</span></div>
       </div>
       <div class="stage">
-        <h1 class="title" id="fieldName">Strawberry<br>Field B<small id="sub">Node ZN-02 · 7-in-1 soil probe · RS485</small></h1>
+        <h1 class="title" id="fieldName">Strawberry<br>Field B<small id="sub">Node FL-02 · 7-in-1 soil probe · RS485</small></h1>
         <div class="viz">
           <div class="rings"></div>
           <div class="field">
@@ -343,20 +343,20 @@ function startLive(){
       if(!r.ok)throw new Error(r.status);render(normalize(await r.json()));setMode('live','Live · '+host);}
       catch(e){setMode('error','No response · '+host);$('st').textContent='Cannot reach '+host+'. Check the ESP32 is on the same Wi-Fi, serves /data with CORS (Access-Control-Allow-Origin: *), and that the IP is right.'}};
     tick();timer=setInterval(tick,ms)}
-  localStorage&&localStorage.setItem('zolve.ip',host);
+  localStorage&&localStorage.setItem('fieldline.ip',host);
 }
 $('connBtn').addEventListener('click',e=>{if(e.target.closest('.pop'))return;$('pop').classList.toggle('open')});
 document.addEventListener('click',e=>{if(!e.target.closest('#connBtn'))$('pop').classList.remove('open')});
 $('connect').onclick=startLive;$('demo').onclick=startDemo;
-try{const s=localStorage.getItem('zolve.ip');if(s)$('ip').value=s}catch(_){}
+try{const s=localStorage.getItem('fieldline.ip');if(s)$('ip').value=s}catch(_){}
 
 /* misc interactions */
 const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)};
-document.querySelectorAll('.thumb:not(.add)').forEach((t,i)=>t.onclick=()=>{document.querySelectorAll('.thumb').forEach(x=>x.classList.remove('sel'));t.classList.add('sel');$('fieldName').firstChild.textContent=i?'Strawberry':'Maize';$('fieldName').childNodes[2].textContent=i?'Field B':'Field A';$('sub').textContent=i?'Node ZN-02 · 7-in-1 soil probe · RS485':'Node ZN-01 · 7-in-1 soil probe · RS485'});
+document.querySelectorAll('.thumb:not(.add)').forEach((t,i)=>t.onclick=()=>{document.querySelectorAll('.thumb').forEach(x=>x.classList.remove('sel'));t.classList.add('sel');$('fieldName').firstChild.textContent=i?'Strawberry':'Maize';$('fieldName').childNodes[2].textContent=i?'Field B':'Field A';$('sub').textContent=i?'Node FL-02 · 7-in-1 soil probe · RS485':'Node FL-01 · 7-in-1 soil probe · RS485'});
 const TIPS=['Keep soil moisture 45–65% during fruiting for sweeter berries.','Target pH 5.5–6.8. Below 5.5, add lime; above 6.8, add elemental sulphur.','Potassium drives fruit size and sugar — top up when K < 80 mg/kg.','EC above 1500 µS/cm signals salt build-up: flush with clean water.','Air above 30°C stresses flowers; use 30% shade net in heat waves.'];let ti=0;
 $('tipBtn').onclick=()=>{toast(TIPS[ti++%TIPS.length])};
 document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>toast(t.querySelector('.lb').textContent+': '+t.querySelector('.v').textContent.trim()));
-addRow('growth','Node ZN-02 online · firmware 1.0.3','Growth','');
+addRow('growth','Node FL-02 online · firmware 1.0.3','Growth','');
 addRow('npk','Probe calibration verified','Calibrated','grey');
 window.addEventListener('resize',drawSpark);
 setInterval(()=>{if(mode==='demo'||mode==='live'){/* keep wave alive between packets */const bars=wave.children;const t=Date.now()/400;for(let i=0;i<bars.length;i++){const h=parseFloat(bars[i].style.height)||8;bars[i].style.height=(h*0.85+ (6+Math.abs(Math.sin(t+i*.55))*20)*0.15)+'px'}}},120);
