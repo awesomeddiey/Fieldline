@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zolve · Soil Intelligence</title>
+<style>
+:root{
+  --ink:#101311; --ink2:#3a4540; --mute:#7a857f; --line:rgba(16,19,17,.08);
+  --glass:rgba(255,255,255,.72); --glass2:rgba(255,255,255,.55);
+  --lime:#c9e85c; --lime2:#b4dc3a; --green:#4f9d3a; --dark:#1b1f1c;
+  --amber:#f2b544; --red:#e5533d; --blue:#4f8fe0;
+  --r:22px; --shadow:0 24px 60px -20px rgba(20,30,20,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter",system-ui,Segoe UI,Roboto,sans-serif;
+  color:var(--ink); -webkit-font-smoothing:antialiased;
+  background:#d8e0d2 url(bg.webp) center/cover fixed no-repeat;
+  min-height:100vh; display:flex; align-items:center; justify-content:center; padding:28px;
+  overflow-x:hidden;
+}
+body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(0,0,0,.12));pointer-events:none}
+/* floating particles */
+.pollen{position:fixed;inset:0;pointer-events:none;z-index:0}
+.pollen i{position:absolute;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.75);filter:blur(1px);animation:float linear infinite}
+@keyframes float{0%{transform:translateY(110vh) translateX(0);opacity:0}10%{opacity:.9}90%{opacity:.6}100%{transform:translateY(-10vh) translateX(60px);opacity:0}}
+
+.frame{
+  position:relative;z-index:1;width:min(1320px,100%);aspect-ratio:1320/820;min-height:720px;
+  border-radius:34px;padding:3px;
+  background:linear-gradient(135deg,rgba(255,255,255,.85),rgba(255,255,255,.35));
+  box-shadow:var(--shadow), inset 0 0 0 1px rgba(255,255,255,.6);
+}
+.screen{
+  height:100%;border-radius:31px;overflow:hidden;position:relative;
+  background:rgba(235,240,235,.62);
+  backdrop-filter:blur(28px) saturate(1.25);-webkit-backdrop-filter:blur(28px) saturate(1.25);
+  display:grid;grid-template-rows:64px 1fr;
+}
+/* top bar */
+.bar{display:flex;align-items:center;gap:28px;padding:0 26px;border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:19px;letter-spacing:-.3px}
+.logo svg{width:22px;height:22px}
+.nav{display:flex;gap:22px;font-size:13px;color:var(--mute)}
+.nav b{color:var(--ink);font-weight:600;position:relative}
+.nav b::after{content:"";position:absolute;left:0;right:0;bottom:-23px;height:2px;background:var(--ink);border-radius:2px}
+.search{margin-left:auto;display:flex;align-items:center;gap:8px;background:#fff;border-radius:999px;padding:8px 14px;width:240px;color:var(--mute);font-size:13px;box-shadow:inset 0 0 0 1px var(--line)}
+.search input{border:0;outline:0;background:none;font:inherit;width:100%}
+.btn{background:var(--dark);color:#fff;border:0;border-radius:999px;padding:9px 16px;font:600 12.5px/1 inherit;cursor:pointer;transition:.2s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px -8px rgba(0,0,0,.5)}
+.conn{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2);background:#fff;border-radius:999px;padding:6px 12px 6px 8px;box-shadow:inset 0 0 0 1px var(--line);cursor:pointer;position:relative}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 0 rgba(242,181,68,.6);animation:pulse 1.8s infinite}
+.dot.on{background:#45c26b;box-shadow:0 0 0 0 rgba(69,194,107,.6)}
+.dot.off{background:var(--red);animation:none}
+@keyframes pulse{0%{box-shadow:0 0 0 0 currentColor}70%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.avatar{width:30px;height:30px;border-radius:50%;background:conic-gradient(from 120deg,#c9e85c,#4f9d3a,#c9e85c);border:2px solid #fff}
+
+/* main grid */
+.main{display:grid;grid-template-columns:1.05fr 1fr;gap:22px;padding:22px 26px 26px;min-height:0}
+.hero{position:relative;display:grid;grid-template-columns:64px 1fr;gap:18px;min-height:0}
+.rail{display:flex;flex-direction:column;gap:12px;justify-content:center}
+.thumb{width:52px;height:52px;border-radius:14px;background:#fff;display:grid;place-items:center;cursor:pointer;font-size:22px;box-shadow:0 8px 18px -10px rgba(0,0,0,.3);border:2px solid transparent;transition:.2s}
+.thumb.sel{border-color:var(--lime2);box-shadow:0 0 0 4px rgba(201,232,92,.35)}
+.thumb.add{background:rgba(255,255,255,.45);color:var(--mute);font-size:11px;flex-direction:column;gap:2px}
+.stage{position:relative;display:flex;flex-direction:column;min-height:0}
+.title{font-size:clamp(30px,3.3vw,46px);font-weight:600;letter-spacing:-1.4px;line-height:1.02;text-align:center;padding-top:6px}
+.title small{display:block;font-size:13px;letter-spacing:0;font-weight:500;color:var(--mute);margin-top:8px}
+.viz{position:relative;flex:1;min-height:0;display:grid;place-items:center}
+.rings{position:absolute;width:min(62%,420px);aspect-ratio:1;border-radius:50%;border:1px dashed rgba(16,19,17,.18);animation:spin 40s linear infinite}
+.rings::before,.rings::after{content:"";position:absolute;inset:10%;border-radius:50%;border:1px solid rgba(255,255,255,.6)}
+.rings::after{inset:22%;border:1px dashed rgba(16,19,17,.12)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.field{position:relative;width:min(92%,560px);filter:drop-shadow(0 30px 30px rgba(0,0,0,.35));animation:bob 6s ease-in-out infinite}
+.field img{width:100%;display:block;user-select:none;-webkit-user-drag:none}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.scanline{position:absolute;left:8%;right:8%;height:2px;background:linear-gradient(90deg,transparent,var(--lime2),#fff,var(--lime2),transparent);top:20%;box-shadow:0 0 18px 4px rgba(201,232,92,.55);animation:scan 3.6s ease-in-out infinite;border-radius:2px}
+@keyframes scan{0%{top:22%;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:78%;opacity:0}}
+.tag{position:absolute;font-size:11px;color:var(--ink2);background:rgba(255,255,255,.85);backdrop-filter:blur(8px);padding:7px 11px;border-radius:12px;box-shadow:0 8px 20px -10px rgba(0,0,0,.35);line-height:1.25;white-space:nowrap;transition:.3s}
+.tag b{display:block;font-size:15px;color:var(--ink);font-weight:600;letter-spacing:-.3px}
+.tag::before{content:"";position:absolute;width:8px;height:8px;border-radius:50%;background:#fff;border:2px solid var(--ink);box-shadow:0 0 0 4px rgba(255,255,255,.6)}
+.tag.n{left:4%;top:22%}.tag.n::before{right:-26px;top:50%;margin-top:-6px}
+.tag.p{right:2%;top:34%}.tag.p::before{left:-26px;top:50%;margin-top:-6px}
+.tag.k{left:8%;bottom:14%}.tag.k::before{right:-26px;top:50%;margin-top:-6px}
+.scanlbl{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-size:13px;color:var(--ink2);padding:10px 26px;letter-spacing:.2px}
+.scanlbl::before,.scanlbl::after{content:"";position:absolute;width:18px;height:18px;border:1.5px solid rgba(16,19,17,.45)}
+.scanlbl::before{left:0;top:0;border-right:0;border-bottom:0}
+.scanlbl::after{right:0;bottom:0;border-left:0;border-top:0}
+.scanlbl span::after{content:"";animation:dots 1.5s steps(4) infinite}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+
+/* right */
+.right{display:grid;grid-template-rows:auto auto 1fr;grid-template-columns:1fr 150px;gap:16px;min-height:0}
+.card{background:var(--glass);border-radius:var(--r);padding:18px;box-shadow:0 10px 30px -18px rgba(0,0,0,.3),inset 0 0 0 1px rgba(255,255,255,.7)}
+.card h3{font-size:17px;font-weight:600;letter-spacing:-.4px;display:flex;justify-content:space-between;align-items:center}
+.card h3 a{font-size:11.5px;color:var(--ink2);font-weight:500;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.health{grid-column:1}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.tile{background:#fff;border-radius:14px;padding:10px 12px;display:flex;gap:10px;align-items:center;box-shadow:inset 0 0 0 1px var(--line);cursor:pointer;transition:.25s;position:relative;overflow:hidden}
+.tile:hover{transform:translateY(-2px);box-shadow:0 12px 24px -14px rgba(0,0,0,.35),inset 0 0 0 1px var(--line)}
+.tile .ic{width:30px;height:30px;border-radius:9px;background:#eef3ea;display:grid;place-items:center;color:var(--green);flex:none}
+.tile .ic svg{width:15px;height:15px}
+.tile .lb{font-size:10.5px;color:var(--mute)}
+.tile .v{font-size:14px;font-weight:600;letter-spacing:-.2px;font-variant-numeric:tabular-nums}
+.tile .v em{font-style:normal;font-size:10px;color:var(--mute);margin-left:3px;font-weight:500}
+.tile .bar{position:absolute;left:0;bottom:0;height:2.5px;background:var(--lime2);transition:width 1s cubic-bezier(.2,.8,.2,1)}
+.tile.warn .ic{background:#fff3dc;color:#c98a12}.tile.warn .bar{background:var(--amber)}
+.tile.bad .ic{background:#fde3de;color:var(--red)}.tile.bad .bar{background:var(--red)}
+
+.growth{grid-column:2;grid-row:1;background:linear-gradient(160deg,#d7f07a,#bfe44a);color:var(--ink);padding:14px;display:flex;flex-direction:column}
+.growth h3{font-size:15px}
+.growth select{border:0;background:none;font:500 10.5px inherit;color:var(--ink2);outline:0}
+.growth canvas{width:100%;flex:1;min-height:60px;max-height:120px;margin-top:8px}
+.growth .ax{display:flex;justify-content:space-between;font-size:9.5px;color:var(--ink2);margin-top:4px}
+.growth .chip{align-self:flex-start;background:var(--dark);color:#fff;font-size:10.5px;padding:3px 8px;border-radius:999px;margin-top:6px;font-variant-numeric:tabular-nums}
+
+.npk{grid-column:1;background:linear-gradient(160deg,#6f7a72,#4d5750);color:#fff;position:relative;overflow:hidden}
+.npk h3{color:#fff}.npk h3 span{font-size:11px;color:rgba(255,255,255,.65);font-weight:500;display:block}
+.npk .live{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.15);display:grid;place-items:center}
+.npk .live i{width:9px;height:9px;border-radius:50%;background:var(--lime);animation:pulse 1.6s infinite;color:rgba(201,232,92,.7)}
+.wave{display:flex;align-items:center;gap:3px;height:54px;margin-top:14px}
+.wave b{flex:1;background:rgba(255,255,255,.85);border-radius:2px;min-height:4px;transition:height .6s ease;transform-origin:center}
+.wave b.lo{background:rgba(255,255,255,.35)}
+.npkrow{display:flex;gap:8px;margin-top:12px}
+.npkrow div{flex:1;background:rgba(255,255,255,.1);border-radius:12px;padding:8px 10px;font-size:10.5px;color:rgba(255,255,255,.7)}
+.npkrow b{display:block;font-size:16px;color:#fff;font-weight:600;letter-spacing:-.3px;font-variant-numeric:tabular-nums}
+.npkrow b em{font-style:normal;font-size:9.5px;color:rgba(255,255,255,.6);margin-left:2px}
+.npk .meta{display:flex;justify-content:space-between;font-size:10.5px;color:rgba(255,255,255,.65);margin-top:10px}
+
+.tut{grid-column:2;grid-row:2;padding:0;overflow:hidden;position:relative;background:#fff;display:flex;flex-direction:column}
+.tut .hd{padding:12px 12px 0}
+.tut h4{font-size:12.5px;font-weight:600}
+.tut small{font-size:10px;color:var(--mute)}
+.tut .ph{flex:1;margin:10px 12px 12px;border-radius:12px;background:linear-gradient(160deg,#e8f1de,#c6d9b4);min-height:90px;position:relative;overflow:hidden}
+.tut .ph::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 60% 40%,rgba(255,255,255,.7),transparent 55%)}
+.tut .go{position:absolute;right:16px;bottom:16px;width:28px;height:28px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 6px 14px -6px rgba(0,0,0,.4);font-size:14px;z-index:1;cursor:pointer}
+
+.updates{grid-column:1/3;grid-row:3;display:flex;flex-direction:column;min-height:0}
+.list{margin-top:8px;overflow:auto;flex:1}
+.row{display:grid;grid-template-columns:26px 1fr auto 112px 14px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;animation:in .5s ease both}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.row .ic{width:26px;height:26px;border-radius:8px;background:#fff;display:grid;place-items:center;color:var(--ink2);box-shadow:inset 0 0 0 1px var(--line)}
+.row .ic svg{width:13px;height:13px}
+.pill{font-size:10.5px;padding:4px 10px;border-radius:999px;background:#e7f0d6;color:#3b6b1f;font-weight:500}
+.pill.dark{background:var(--dark);color:#fff}.pill.grey{background:#e9ece9;color:var(--ink2)}.pill.red{background:#fde3de;color:#b2311d}
+.row time{color:var(--mute);font-size:11px;text-align:right;font-variant-numeric:tabular-nums}
+.row .chev{color:var(--mute)}
+
+/* connection popover */
+.pop{position:absolute;top:46px;right:0;width:300px;background:#fff;border-radius:18px;padding:16px;box-shadow:0 30px 60px -20px rgba(0,0,0,.4);display:none;z-index:20;cursor:default;text-align:left}
+.pop.open{display:block}
+.pop label{font-size:11px;color:var(--mute);display:block;margin:10px 0 5px}
+.pop input{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font:13px inherit;outline:0;background:#f6f7f6}
+.pop .r{display:flex;gap:8px;margin-top:12px}
+.pop .r .btn{flex:1}
+.pop .ghost{background:#eef0ee;color:var(--ink)}
+.pop .st{font-size:11px;color:var(--mute);margin-top:10px;line-height:1.4}
+.pop code{font-size:10.5px;background:#f0f2f0;padding:2px 5px;border-radius:5px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:var(--dark);color:#fff;font-size:12.5px;padding:10px 16px;border-radius:999px;opacity:0;transition:.3s;z-index:50;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%)}
+@media (max-width:980px){.frame{aspect-ratio:auto;min-height:0}.main{grid-template-columns:1fr}.hero{min-height:520px}.nav{display:none}}
+</style>
+</head>
+<body>
+<div class="pollen" id="pollen"></div>
+
+<div class="frame"><div class="screen">
+  <header class="bar">
+    <div class="logo"><svg viewBox="0 0 24 24" fill="none"><path d="M3 14c4-8 10-9 18-9-1 8-6 13-14 13H3v-4z" fill="#9fcf2e"/><path d="M3 18c3-4 7-7 13-9" stroke="#2f5d1a" stroke-width="1.6" stroke-linecap="round"/></svg>zolve</div>
+    <nav class="nav"><b>My fields</b><span>Analytics</span><span>Settings</span></nav>
+    <div class="search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input placeholder="Search"></div>
+    <button class="btn">Upgrade</button>
+    <div class="conn" id="connBtn"><span class="dot" id="dot"></span><span id="connTxt">Demo mode</span>
+      <div class="pop" id="pop">
+        <div style="font-weight:600;font-size:13.5px">ESP32 connection</div>
+        <label>Device address on LAN</label>
+        <input id="ip" placeholder="192.168.1.50  or  zolve-node.local" value="192.168.1.50">
+        <label>Poll interval (ms)</label>
+        <input id="ms" type="number" value="2000" min="500">
+        <div class="r"><button class="btn" id="connect">Connect</button><button class="btn ghost" id="demo">Demo</button></div>
+        <div class="st" id="st">Expects <code>GET http://&lt;ip&gt;/data</code> returning JSON with <code>n,p,k,ph,ec,moisture,soilTemp,airTemp,humidity</code>. Falls back to WebSocket <code>ws://&lt;ip&gt;/ws</code> if available.</div>
+      </div>
+    </div>
+    <div class="avatar"></div>
+  </header>
+
+  <div class="main">
+    <!-- LEFT -->
+    <section class="hero">
+      <div class="rail">
+        <div class="thumb" title="Field A">🌱</div>
+        <div class="thumb sel" title="Field B">🍓</div>
+        <div class="thumb add">＋<span>Add</span></div>
+      </div>
+      <div class="stage">
+        <h1 class="title" id="fieldName">Strawberry<br>Field B<small id="sub">Node ZN-02 · 7-in-1 soil probe · RS485</small></h1>
+        <div class="viz">
+          <div class="rings"></div>
+          <div class="field">
+            <img src="crop.webp" alt="Field">
+            <div class="scanline"></div>
+          </div>
+          <div class="tag n">Nitrogen (N)<b><span id="tN">—</span> mg/kg</b></div>
+          <div class="tag p">Phosphorus (P)<b><span id="tP">—</span> mg/kg</b></div>
+          <div class="tag k">Potassium (K)<b><span id="tK">—</span> mg/kg</b></div>
+          <div class="scanlbl"><span id="scanTxt">Scanning</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT -->
+    <section class="right">
+      <div class="card health">
+        <h3>Soil Health <a>See all</a></h3>
+        <div class="grid">
+          <div class="tile" id="tMoist"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/></svg></div><div><div class="lb">Soil moisture</div><div class="v"><span id="vMoist">—</span><em>%</em></div></div><i class="bar" id="bMoist"></i></div>
+          <div class="tile" id="tHum"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="9" r="2"/><circle cx="16" cy="15" r="2"/><path d="m17 7-10 10"/></svg></div><div><div class="lb">Humidity</div><div class="v"><span id="vHum">—</span><em>%</em></div></div><i class="bar" id="bHum"></i></div>
+          <div class="tile" id="tTemp"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></svg></div><div><div class="lb">Soil temp</div><div class="v"><span id="vTemp">—</span><em>°C</em></div></div><i class="bar" id="bTemp"></i></div>
+          <div class="tile" id="tAir"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2m-3.1-6.9-1.4 1.4M6.5 17.5l-1.4 1.4m0-13.8 1.4 1.4m11 11 1.4 1.4"/></svg></div><div><div class="lb">Air temp</div><div class="v"><span id="vAir">—</span><em>°C</em></div></div><i class="bar" id="bAir"></i></div>
+          <div class="tile" id="tPh"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3v6l-5 9a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-9V3"/><path d="M8 3h8"/></svg></div><div><div class="lb">Soil pH</div><div class="v"><span id="vPh">—</span></div></div><i class="bar" id="bPh"></i></div>
+          <div class="tile" id="tEc"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg></div><div><div class="lb">Conductivity</div><div class="v"><span id="vEc">—</span><em>µS/cm</em></div></div><i class="bar" id="bEc"></i></div>
+        </div>
+      </div>
+
+      <div class="card growth">
+        <h3>Moisture <select id="range"><option>1 min</option><option>5 min</option><option>15 min</option></select></h3>
+        <span class="chip" id="trend">▲ 0%</span>
+        <canvas id="spark"></canvas>
+        <div class="ax"><span>-60s</span><span>-45s</span><span>-30s</span><span>-15s</span><span>now</span></div>
+      </div>
+
+      <div class="card npk">
+        <h3><div>NPK Analysis<span>Live nutrient signal</span></div><div class="live"><i></i></div></h3>
+        <div class="wave" id="wave"></div>
+        <div class="npkrow">
+          <div>Nitrogen<b><span id="nN">—</span><em>mg/kg</em></b></div>
+          <div>Phosphorus<b><span id="nP">—</span><em>mg/kg</em></b></div>
+          <div>Potassium<b><span id="nK">—</span><em>mg/kg</em></b></div>
+        </div>
+        <div class="meta"><span id="rssi">RSSI —</span><span id="last">last update —</span></div>
+      </div>
+
+      <div class="card tut">
+        <div class="hd"><h4>Agronomist tips</h4><small>For strawberries</small></div>
+        <div class="ph"></div>
+        <div class="go" id="tipBtn">›</div>
+      </div>
+
+      <div class="card updates">
+        <h3>Recent Updates <a>See all</a></h3>
+        <div class="list" id="list"></div>
+      </div>
+    </section>
+  </div>
+</div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------- state ---------- */
+const $=id=>document.getElementById(id);
+const hist=[]; const MAXH=60;
+let timer=null, ws=null, mode='demo', lastAlert={};
+const fmt=(v,d=0)=>v==null||isNaN(v)?'—':Number(v).toFixed(d);
+
+/* pollen particles */
+(()=>{const p=$('pollen');for(let i=0;i<26;i++){const s=document.createElement('i');s.style.left=Math.random()*100+'%';s.style.animationDuration=(14+Math.random()*22)+'s';s.style.animationDelay=(-Math.random()*30)+'s';s.style.width=s.style.height=(3+Math.random()*5)+'px';p.appendChild(s)}})();
+
+/* wave bars */
+const wave=$('wave');for(let i=0;i<44;i++){const b=document.createElement('b');b.style.height='8px';if(i>30)b.className='lo';wave.appendChild(b)}
+
+/* thresholds: [lowWarn, lowBad, highWarn, highBad] tuned for strawberries */
+const TH={moisture:[35,25,75,85],humidity:[40,25,85,95],soilTemp:[12,8,28,32],airTemp:[10,4,30,35],ph:[5.5,5.0,6.8,7.5],ec:[300,150,1500,2500],n:[40,20,200,300],p:[20,10,120,200],k:[80,40,300,450]};
+const status=(k,v)=>{const t=TH[k];if(!t||v==null)return'';if(v<t[1]||v>t[3])return'bad';if(v<t[0]||v>t[2])return'warn';return''};
+const pct=(v,lo,hi)=>Math.max(0,Math.min(100,(v-lo)/(hi-lo)*100));
+
+/* ---------- render ---------- */
+function render(d){
+  const set=(id,v,dec)=>{$(id).textContent=fmt(v,dec)};
+  set('tN',d.n);set('tP',d.p);set('tK',d.k);set('nN',d.n);set('nP',d.p);set('nK',d.k);
+  set('vMoist',d.moisture,1);set('vHum',d.humidity,0);set('vTemp',d.soilTemp,1);set('vAir',d.airTemp,1);set('vPh',d.ph,2);set('vEc',d.ec,0);
+  const tile=(id,k,v,lo,hi)=>{const t=$('t'+id);t.className='tile '+status(k,v);$('b'+id).style.width=pct(v,lo,hi)+'%'};
+  tile('Moist','moisture',d.moisture,0,100);tile('Hum','humidity',d.humidity,0,100);tile('Temp','soilTemp',d.soilTemp,0,45);tile('Air','airTemp',d.airTemp,0,45);tile('Ph','ph',d.ph,3,10);tile('Ec','ec',d.ec,0,3000);
+  // wave: encode N,P,K into a living waveform
+  const bars=wave.children;const t=Date.now()/400;
+  for(let i=0;i<bars.length;i++){const base=(i<15?d.n/300:i<30?d.p/200:d.k/450)*40;const h=6+base*(0.55+0.45*Math.abs(Math.sin(t+i*0.55)));bars[i].style.height=h+'px';bars[i].className=i>30?'lo':''}
+  $('rssi').textContent=d.rssi!=null?`RSSI ${d.rssi} dBm`:(mode==='demo'?'RSSI —':'RSSI n/a');
+  $('last').textContent='updated '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  hist.push(d.moisture);if(hist.length>MAXH)hist.shift();drawSpark();
+  alerts(d);
+  $('scanTxt').textContent=mode==='live'?'Live from ESP32':'Simulating';
+}
+function drawSpark(){
+  const c=$('spark'),dpr=devicePixelRatio||1,W=c.clientWidth,H=c.clientHeight;c.width=W*dpr;c.height=H*dpr;const x=c.getContext('2d');x.scale(dpr,dpr);
+  if(hist.length<2)return;const mn=Math.min(...hist)-2,mx=Math.max(...hist)+2;
+  const px=i=>i/(MAXH-1)*W,py=v=>H-6-(v-mn)/(mx-mn)*(H-16);
+  const off=MAXH-hist.length;
+  x.beginPath();hist.forEach((v,i)=>{const X=px(i+off),Y=py(v);i?x.lineTo(X,Y):x.moveTo(X,Y)});
+  x.lineTo(px(MAXH-1),H);x.lineTo(px(off),H);x.closePath();const g=x.createLinearGradient(0,0,0,H);g.addColorStop(0,'rgba(27,31,28,.18)');g.addColorStop(1,'rgba(27,31,28,0)');x.fillStyle=g;x.fill();
+  x.beginPath();hist.forEach((v,i)=>{const X=px(i+off),Y=py(v);i?x.lineTo(X,Y):x.moveTo(X,Y)});x.strokeStyle='#1b1f1c';x.lineWidth=1.8;x.lineJoin='round';x.stroke();
+  const lv=hist[hist.length-1];x.beginPath();x.arc(px(MAXH-1),py(lv),3.5,0,7);x.fillStyle='#1b1f1c';x.fill();x.beginPath();x.arc(px(MAXH-1),py(lv),7,0,7);x.fillStyle='rgba(27,31,28,.18)';x.fill();
+  const first=hist[0],ch=first?((lv-first)/first*100):0;$('trend').textContent=(ch>=0?'▲ ':'▼ ')+Math.abs(ch).toFixed(1)+'%';
+}
+/* alerts feed */
+const ICONS={moisture:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/></svg>',light:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2"/></svg>',growth:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',npk:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>'};
+function addRow(icon,text,pill,cls){const r=document.createElement('div');r.className='row';r.innerHTML=`<div class="ic">${ICONS[icon]}</div><span>${text}</span><span class="pill ${cls||''}">${pill}</span><time>${new Date().toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}</time><span class="chev">›</span>`;const l=$('list');l.prepend(r);while(l.children.length>8)l.lastChild.remove()}
+function alerts(d){
+  const now=Date.now();const fire=(key,cool,fn)=>{if(!lastAlert[key]||now-lastAlert[key]>cool){lastAlert[key]=now;fn()}};
+  if(d.moisture<TH.moisture[0])fire('m',60e3,()=>addRow('moisture',`Soil moisture low: ${fmt(d.moisture,1)}%`,'Irrigate','dark'));
+  if(d.moisture>TH.moisture[2])fire('mh',60e3,()=>addRow('moisture',`Soil saturated: ${fmt(d.moisture,1)}%`,'Hold water','grey'));
+  if(d.n<TH.n[0])fire('n',120e3,()=>addRow('npk',`Nitrogen low: ${fmt(d.n)} mg/kg`,'Fertilise','red'));
+  if(d.k<TH.k[0])fire('k',120e3,()=>addRow('npk',`Potassium low: ${fmt(d.k)} mg/kg`,'Fertilise','red'));
+  if(d.airTemp>TH.airTemp[2])fire('t',120e3,()=>addRow('light',`Heat stress risk: ${fmt(d.airTemp,1)}°C`,'Shade','grey'));
+  if(d.ph<TH.ph[0]||d.ph>TH.ph[2])fire('ph',300e3,()=>addRow('npk',`Soil pH ${fmt(d.ph,2)} outside 5.5–6.8`,'Amend','grey'));
+}
+
+/* ---------- data sources ---------- */
+let sim={n:118,p:46,k:160,ph:6.2,ec:820,moisture:48,soilTemp:21.5,airTemp:26,humidity:61};
+function simulate(){const j=(k,a,lo,hi)=>{sim[k]=Math.max(lo,Math.min(hi,sim[k]+(Math.random()-.5)*a))};
+  j('n',4,10,300);j('p',2,5,200);j('k',5,20,450);j('ph',.05,4.5,8.5);j('ec',30,100,3000);j('moisture',1.5,15,95);j('soilTemp',.3,5,40);j('airTemp',.4,0,45);j('humidity',1.5,20,100);
+  if(Math.random()<.02)sim.moisture-=12; // occasional dry event
+  return {...sim,rssi:-55-Math.round(Math.random()*8)};}
+function normalize(j){ // accept several key styles from firmware
+  const g=(...k)=>{for(const x of k){if(j[x]!=null)return +j[x]}return null};
+  return {n:g('n','N','nitrogen'),p:g('p','P','phosphorus'),k:g('k','K','potassium'),ph:g('ph','pH','PH'),ec:g('ec','EC','conductivity'),moisture:g('moisture','soil_moisture','soilMoisture','hum_soil'),soilTemp:g('soilTemp','soil_temp','temperature','temp'),airTemp:g('airTemp','air_temp','tempAir'),humidity:g('humidity','air_humidity','rh'),rssi:g('rssi','RSSI')};
+}
+function setMode(m,txt){mode=m;$('dot').className='dot '+(m==='live'?'on':m==='error'?'off':'');$('connTxt').textContent=txt}
+function stop(){clearInterval(timer);timer=null;if(ws){ws.onclose=null;ws.close();ws=null}}
+function startDemo(){stop();setMode('demo','Demo mode');render(simulate());timer=setInterval(()=>render(simulate()),1500)}
+function startLive(){
+  stop();const host=$('ip').value.trim().replace(/^https?:\/\//,'').replace(/\/$/,'');const ms=Math.max(500,+$('ms').value||2000);
+  setMode('connecting','Connecting…');$('st').textContent='Trying WebSocket ws://'+host+'/ws …';
+  let gotWs=false;
+  try{ws=new WebSocket('ws://'+host+'/ws');
+    ws.onmessage=e=>{try{gotWs=true;setMode('live','Live · '+host);render(normalize(JSON.parse(e.data)))}catch(_){}};
+    ws.onopen=()=>{$('st').textContent='WebSocket open. Streaming from '+host};
+    ws.onerror=()=>{};ws.onclose=()=>{if(!gotWs)poll()};
+    setTimeout(()=>{if(!gotWs&&ws&&ws.readyState!==1){ws.close()}},2500);
+  }catch(_){poll()}
+  function poll(){if(timer)return;$('st').textContent='Polling http://'+host+'/data every '+ms+' ms';
+    const tick=async()=>{try{const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),ms*0.9);
+      const r=await fetch('http://'+host+'/data',{signal:ctrl.signal,cache:'no-store'});clearTimeout(t);
+      if(!r.ok)throw new Error(r.status);render(normalize(await r.json()));setMode('live','Live · '+host);}
+      catch(e){setMode('error','No response · '+host);$('st').textContent='Cannot reach '+host+'. Check the ESP32 is on the same Wi-Fi, serves /data with CORS (Access-Control-Allow-Origin: *), and that the IP is right.'}};
+    tick();timer=setInterval(tick,ms)}
+  localStorage&&localStorage.setItem('zolve.ip',host);
+}
+$('connBtn').addEventListener('click',e=>{if(e.target.closest('.pop'))return;$('pop').classList.toggle('open')});
+document.addEventListener('click',e=>{if(!e.target.closest('#connBtn'))$('pop').classList.remove('open')});
+$('connect').onclick=startLive;$('demo').onclick=startDemo;
+try{const s=localStorage.getItem('zolve.ip');if(s)$('ip').value=s}catch(_){}
+
+/* misc interactions */
+const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)};
+document.querySelectorAll('.thumb:not(.add)').forEach((t,i)=>t.onclick=()=>{document.querySelectorAll('.thumb').forEach(x=>x.classList.remove('sel'));t.classList.add('sel');$('fieldName').firstChild.textContent=i?'Strawberry':'Maize';$('fieldName').childNodes[2].textContent=i?'Field B':'Field A';$('sub').textContent=i?'Node ZN-02 · 7-in-1 soil probe · RS485':'Node ZN-01 · 7-in-1 soil probe · RS485'});
+const TIPS=['Keep soil moisture 45–65% during fruiting for sweeter berries.','Target pH 5.5–6.8. Below 5.5, add lime; above 6.8, add elemental sulphur.','Potassium drives fruit size and sugar — top up when K < 80 mg/kg.','EC above 1500 µS/cm signals salt build-up: flush with clean water.','Air above 30°C stresses flowers; use 30% shade net in heat waves.'];let ti=0;
+$('tipBtn').onclick=()=>{toast(TIPS[ti++%TIPS.length])};
+document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>toast(t.querySelector('.lb').textContent+': '+t.querySelector('.v').textContent.trim()));
+addRow('growth','Node ZN-02 online · firmware 1.0.3','Growth','');
+addRow('npk','Probe calibration verified','Calibrated','grey');
+window.addEventListener('resize',drawSpark);
+setInterval(()=>{if(mode==='demo'||mode==='live'){/* keep wave alive between packets */const bars=wave.children;const t=Date.now()/400;for(let i=0;i<bars.length;i++){const h=parseFloat(bars[i].style.height)||8;bars[i].style.height=(h*0.85+ (6+Math.abs(Math.sin(t+i*.55))*20)*0.15)+'px'}}},120);
+for(let i=0;i<40;i++){simulate();hist.push(sim.moisture)}
+startDemo();
+</script>
+</body>
+</html>
