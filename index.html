@@ -435,7 +435,7 @@ function startLive(){
 }
 $('connBtn').addEventListener('click',e=>{if(e.target.closest('.pop'))return;$('pop').classList.toggle('open')});
 document.addEventListener('click',e=>{if(!e.target.closest('#connBtn'))$('pop').classList.remove('open')});
-$('connect').onclick=startLive;$('demo').onclick=startDemo;$('ip').value=store.get('ip','192.168.1.50');
+$('connect').onclick=startLive;$('demo').onclick=startDemo;$('ip').value=store.get('ip','fieldline-node.local');
 $('pause').onclick=()=>{paused=!paused;$('pause').classList.toggle('paused',paused);$('scanTxt').textContent=paused?'Paused':mode==='live'?'Live from ESP32':'Simulating';toast(paused?'Readings paused':'Readings resumed')};
 
 /* ---------- tips ---------- */
@@ -508,7 +508,7 @@ $('q').addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=$('q').v
 renderList();renderBadge();
 if(!log.length){addRow('npk','Probe calibration verified','Calibrated','grey',true);addRow('growth','Node FL-02 online · firmware 1.0.3','Online','',true)}
 fields.forEach((_,i)=>{ensureField(i);const t0=Date.now()-900e3;const save=cur;cur=i;for(let s=0;s<600;s++){const d=simulate();const t=t0+s*1500;for(const k in METRICS)hist[i][k].push({t,v:d[k]})}cur=save});
-selectField(cur);startDemo();
+selectField(cur);startLive();
 window.addEventListener('resize',drawChart);
 setInterval(()=>{const bars=wave.children,t=Date.now()/400;for(let i=0;i<bars.length;i++){const h=parseFloat(bars[i].style.height)||8;bars[i].style.height=(h*0.85+(6+Math.abs(Math.sin(t+i*.55))*20)*0.15)+'px'}},120);
 </script>
