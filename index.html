@@ -28,7 +28,7 @@ body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg
 @keyframes float{0%{transform:translateY(110vh) translateX(0);opacity:0}10%{opacity:.9}90%{opacity:.6}100%{transform:translateY(-10vh) translateX(60px);opacity:0}}
 
 .frame{
-  position:relative;z-index:1;width:min(1320px,100%);aspect-ratio:1320/820;min-height:720px;
+  position:relative;z-index:1;width:min(1320px,100%);aspect-ratio:1320/860;min-height:760px;
   border-radius:34px;padding:3px;
   background:linear-gradient(135deg,rgba(255,255,255,.85),rgba(255,255,255,.35));
   box-shadow:var(--shadow), inset 0 0 0 1px rgba(255,255,255,.6);
@@ -65,7 +65,7 @@ body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg
 .thumb.sel{border-color:var(--lime2);box-shadow:0 0 0 4px rgba(201,232,92,.35)}
 .thumb.add{background:rgba(255,255,255,.45);color:var(--mute);font-size:11px;flex-direction:column;gap:2px}
 .stage{position:relative;display:flex;flex-direction:column;min-height:0}
-.title{font-size:clamp(30px,3.3vw,46px);font-weight:600;letter-spacing:-1.4px;line-height:1.02;text-align:center;padding-top:6px}
+.title{font-size:clamp(28px,3vw,40px);font-weight:600;letter-spacing:-1.4px;line-height:1.02;text-align:center;padding-top:6px}
 .title small{display:block;font-size:13px;letter-spacing:0;font-weight:500;color:var(--mute);margin-top:8px}
 .viz{position:relative;flex:1;min-height:0;display:grid;place-items:center}
 .rings{position:absolute;width:min(62%,420px);aspect-ratio:1;border-radius:50%;border:1px dashed rgba(16,19,17,.18);animation:spin 40s linear infinite}
@@ -90,6 +90,19 @@ body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg
 .scanlbl span::after{content:"";animation:dots 1.5s steps(4) infinite}
 @keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
 
+
+.gauges{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;padding:4px 4px 0}
+.g{position:relative;text-align:center;cursor:pointer;transition:.25s;border-radius:16px;padding:6px 2px 6px}
+.g:hover{background:rgba(255,255,255,.45);transform:translateY(-2px)}
+.g svg{width:88px;height:88px;transform:rotate(-90deg)}
+.g .tr{fill:none;stroke:rgba(16,19,17,.08);stroke-width:6}
+.g .pr{fill:none;stroke:var(--lime2);stroke-width:6;stroke-linecap:round;stroke-dasharray:213.6;stroke-dashoffset:213.6;transition:stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1),stroke .4s;filter:drop-shadow(0 0 4px rgba(180,220,58,.5))}
+.g.warn .pr{stroke:var(--amber);filter:drop-shadow(0 0 4px rgba(242,181,68,.5))}
+.g.bad .pr{stroke:var(--red);filter:drop-shadow(0 0 4px rgba(229,83,61,.5))}
+.g .gv{position:absolute;top:36px;left:0;right:0;font-size:15px;font-weight:600;letter-spacing:-.3px;font-variant-numeric:tabular-nums;line-height:1}
+.g .gv em{display:block;font-style:normal;font-size:8.5px;color:var(--mute);font-weight:500;margin-top:2px}
+.g .gl{font-size:10px;color:var(--ink2);margin-top:2px}
+.viz{min-height:260px}
 /* right */
 .right{display:grid;grid-template-rows:auto auto 1fr;grid-template-columns:1fr 150px;gap:16px;min-height:0}
 .card{background:var(--glass);border-radius:var(--r);padding:18px;box-shadow:0 10px 30px -18px rgba(0,0,0,.3),inset 0 0 0 1px rgba(255,255,255,.7)}
@@ -108,14 +121,14 @@ body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg
 .tile.warn .ic{background:#fff3dc;color:#c98a12}.tile.warn .bar{background:var(--amber)}
 .tile.bad .ic{background:#fde3de;color:var(--red)}.tile.bad .bar{background:var(--red)}
 
-.growth{grid-column:2;grid-row:1;background:linear-gradient(160deg,#d7f07a,#bfe44a);color:var(--ink);padding:14px;display:flex;flex-direction:column}
-.growth h3{font-size:15px}
+.growth{grid-column:1/3;grid-row:1;min-height:190px;background:linear-gradient(160deg,#d7f07a,#bfe44a);color:var(--ink);padding:14px;display:flex;flex-direction:column}
+.growth{position:relative}.growth h3{font-size:15px}.growth .ax span{font-size:10px}
 .growth select{border:0;background:none;font:500 10.5px inherit;color:var(--ink2);outline:0}
-.growth canvas{width:100%;flex:1;min-height:60px;max-height:120px;margin-top:8px}
+.growth canvas{width:100%;flex:1;min-height:110px;max-height:140px;margin-top:8px}
 .growth .ax{display:flex;justify-content:space-between;font-size:9.5px;color:var(--ink2);margin-top:4px}
-.growth .chip{align-self:flex-start;background:var(--dark);color:#fff;font-size:10.5px;padding:3px 8px;border-radius:999px;margin-top:6px;font-variant-numeric:tabular-nums}
+.growth .chip{position:absolute;right:14px;top:40px;background:var(--dark);color:#fff;font-size:10.5px;padding:3px 8px;border-radius:999px;margin-top:6px;font-variant-numeric:tabular-nums}
 
-.npk{grid-column:1;background:linear-gradient(160deg,#6f7a72,#4d5750);color:#fff;position:relative;overflow:hidden}
+.npk{grid-column:1;grid-row:2;background:linear-gradient(160deg,#6f7a72,#4d5750);color:#fff;position:relative;overflow:hidden}
 .npk h3{color:#fff}.npk h3 span{font-size:11px;color:rgba(255,255,255,.65);font-weight:500;display:block}
 .npk .live{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.15);display:grid;place-items:center}
 .npk .live i{width:9px;height:9px;border-radius:50%;background:var(--lime);animation:pulse 1.6s infinite;color:rgba(201,232,92,.7)}
@@ -206,22 +219,12 @@ body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg
           <div class="tag k">Potassium (K)<b><span id="tK">—</span> mg/kg</b></div>
           <div class="scanlbl"><span id="scanTxt">Scanning</span></div>
         </div>
+        <div class="gauges"><div class="g" id="tMoist"><svg viewBox="0 0 80 80"><circle class="tr" cx="40" cy="40" r="34"/><circle class="pr" id="bMoist" cx="40" cy="40" r="34"/></svg><div class="gv"><span id="vMoist">—</span><em>%</em></div><div class="gl">Soil moisture</div></div><div class="g" id="tHum"><svg viewBox="0 0 80 80"><circle class="tr" cx="40" cy="40" r="34"/><circle class="pr" id="bHum" cx="40" cy="40" r="34"/></svg><div class="gv"><span id="vHum">—</span><em>%</em></div><div class="gl">Humidity</div></div><div class="g" id="tTemp"><svg viewBox="0 0 80 80"><circle class="tr" cx="40" cy="40" r="34"/><circle class="pr" id="bTemp" cx="40" cy="40" r="34"/></svg><div class="gv"><span id="vTemp">—</span><em>°C</em></div><div class="gl">Soil temp</div></div><div class="g" id="tAir"><svg viewBox="0 0 80 80"><circle class="tr" cx="40" cy="40" r="34"/><circle class="pr" id="bAir" cx="40" cy="40" r="34"/></svg><div class="gv"><span id="vAir">—</span><em>°C</em></div><div class="gl">Air temp</div></div><div class="g" id="tPh"><svg viewBox="0 0 80 80"><circle class="tr" cx="40" cy="40" r="34"/><circle class="pr" id="bPh" cx="40" cy="40" r="34"/></svg><div class="gv"><span id="vPh">—</span><em></em></div><div class="gl">Soil pH</div></div><div class="g" id="tEc"><svg viewBox="0 0 80 80"><circle class="tr" cx="40" cy="40" r="34"/><circle class="pr" id="bEc" cx="40" cy="40" r="34"/></svg><div class="gv"><span id="vEc">—</span><em>µS/cm</em></div><div class="gl">Conductivity</div></div></div>
       </div>
     </section>
 
     <!-- RIGHT -->
     <section class="right">
-      <div class="card health">
-        <h3>Soil Health <a>See all</a></h3>
-        <div class="grid">
-          <div class="tile" id="tMoist"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z"/></svg></div><div><div class="lb">Soil moisture</div><div class="v"><span id="vMoist">—</span><em>%</em></div></div><i class="bar" id="bMoist"></i></div>
-          <div class="tile" id="tHum"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="9" r="2"/><circle cx="16" cy="15" r="2"/><path d="m17 7-10 10"/></svg></div><div><div class="lb">Humidity</div><div class="v"><span id="vHum">—</span><em>%</em></div></div><i class="bar" id="bHum"></i></div>
-          <div class="tile" id="tTemp"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/></svg></div><div><div class="lb">Soil temp</div><div class="v"><span id="vTemp">—</span><em>°C</em></div></div><i class="bar" id="bTemp"></i></div>
-          <div class="tile" id="tAir"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2m-3.1-6.9-1.4 1.4M6.5 17.5l-1.4 1.4m0-13.8 1.4 1.4m11 11 1.4 1.4"/></svg></div><div><div class="lb">Air temp</div><div class="v"><span id="vAir">—</span><em>°C</em></div></div><i class="bar" id="bAir"></i></div>
-          <div class="tile" id="tPh"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3v6l-5 9a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-9V3"/><path d="M8 3h8"/></svg></div><div><div class="lb">Soil pH</div><div class="v"><span id="vPh">—</span></div></div><i class="bar" id="bPh"></i></div>
-          <div class="tile" id="tEc"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg></div><div><div class="lb">Conductivity</div><div class="v"><span id="vEc">—</span><em>µS/cm</em></div></div><i class="bar" id="bEc"></i></div>
-        </div>
-      </div>
 
       <div class="card growth">
         <h3>Moisture <select id="range"><option>1 min</option><option>5 min</option><option>15 min</option></select></h3>
@@ -279,7 +282,7 @@ function render(d){
   const set=(id,v,dec)=>{$(id).textContent=fmt(v,dec)};
   set('tN',d.n);set('tP',d.p);set('tK',d.k);set('nN',d.n);set('nP',d.p);set('nK',d.k);
   set('vMoist',d.moisture,1);set('vHum',d.humidity,0);set('vTemp',d.soilTemp,1);set('vAir',d.airTemp,1);set('vPh',d.ph,2);set('vEc',d.ec,0);
-  const tile=(id,k,v,lo,hi)=>{const t=$('t'+id);t.className='tile '+status(k,v);$('b'+id).style.width=pct(v,lo,hi)+'%'};
+  const tile=(id,k,v,lo,hi)=>{const t=$('t'+id);t.className='g '+status(k,v);$('b'+id).style.strokeDashoffset=213.6*(1-pct(v,lo,hi)/100)};
   tile('Moist','moisture',d.moisture,0,100);tile('Hum','humidity',d.humidity,0,100);tile('Temp','soilTemp',d.soilTemp,0,45);tile('Air','airTemp',d.airTemp,0,45);tile('Ph','ph',d.ph,3,10);tile('Ec','ec',d.ec,0,3000);
   // wave: encode N,P,K into a living waveform
   const bars=wave.children;const t=Date.now()/400;
@@ -355,12 +358,12 @@ const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('show');setTi
 document.querySelectorAll('.thumb:not(.add)').forEach((t,i)=>t.onclick=()=>{document.querySelectorAll('.thumb').forEach(x=>x.classList.remove('sel'));t.classList.add('sel');$('fieldName').firstChild.textContent=i?'Strawberry':'Maize';$('fieldName').childNodes[2].textContent=i?'Field B':'Field A';$('sub').textContent=i?'Node FL-02 · 7-in-1 soil probe · RS485':'Node FL-01 · 7-in-1 soil probe · RS485'});
 const TIPS=['Keep soil moisture 45–65% during fruiting for sweeter berries.','Target pH 5.5–6.8. Below 5.5, add lime; above 6.8, add elemental sulphur.','Potassium drives fruit size and sugar — top up when K < 80 mg/kg.','EC above 1500 µS/cm signals salt build-up: flush with clean water.','Air above 30°C stresses flowers; use 30% shade net in heat waves.'];let ti=0;
 $('tipBtn').onclick=()=>{toast(TIPS[ti++%TIPS.length])};
-document.querySelectorAll('.tile').forEach(t=>t.onclick=()=>toast(t.querySelector('.lb').textContent+': '+t.querySelector('.v').textContent.trim()));
+document.querySelectorAll('.g').forEach(t=>t.onclick=()=>toast(t.querySelector('.gl').textContent+': '+t.querySelector('.gv').textContent.trim()));
 addRow('growth','Node FL-02 online · firmware 1.0.3','Growth','');
 addRow('npk','Probe calibration verified','Calibrated','grey');
 window.addEventListener('resize',drawSpark);
 setInterval(()=>{if(mode==='demo'||mode==='live'){/* keep wave alive between packets */const bars=wave.children;const t=Date.now()/400;for(let i=0;i<bars.length;i++){const h=parseFloat(bars[i].style.height)||8;bars[i].style.height=(h*0.85+ (6+Math.abs(Math.sin(t+i*.55))*20)*0.15)+'px'}}},120);
-for(let i=0;i<40;i++){simulate();hist.push(sim.moisture)}
+for(let i=0;i<60;i++){simulate();hist.push(sim.moisture)}
 startDemo();
 </script>
 </body>
