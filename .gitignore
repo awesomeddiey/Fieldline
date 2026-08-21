@@ -1,2 +1,5 @@
 .pio/
 secrets.h
+web_assets.h
+firmware/web_assets.h
+__pycache__/
