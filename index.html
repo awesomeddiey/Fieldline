@@ -426,7 +426,7 @@ function startDemo(){stop();setMode('demo','Demo mode');render(simulate());timer
 function startLive(){
   stop();const host=$('ip').value.trim().replace(/^https?:\/\//,'').replace(/\/$/,'');const ms=Math.max(500,+$('ms').value||2000);store.set('ip',host);
   if(!host)return toast('Enter the node address first');
-  if(location.protocol==='https:'){$('st').innerHTML='This page is served over HTTPS, so the browser blocks plain <code>http://</code> calls to a LAN device (mixed content). Open the downloaded HTML file locally, or put the node behind HTTPS.';setMode('error','Blocked · HTTPS');toast('HTTPS page cannot reach a LAN device — open the local file');return}
+  if(location.protocol==='https:'){$('st').innerHTML='The hosted page cannot open a plain LAN WebSocket. <a href="http://fieldline-node.local/" style="font-weight:700;color:#2f5d1a">Open the live Fieldline LAN dashboard</a> while connected to the farm Wi-Fi.';setMode('error','Open LAN dashboard');toast('Open the LAN dashboard for live readings');return}
   setMode('connecting','Connecting…');$('st').textContent='Trying WebSocket ws://'+host+'/ws …';let gotWs=false;
   try{ws=new WebSocket('ws://'+host+'/ws');ws.onmessage=e=>{try{gotWs=true;setMode('live','Live · '+host);if(!paused)render(normalize(JSON.parse(e.data)))}catch(_){}};ws.onopen=()=>{$('st').textContent='WebSocket open. Streaming from '+host};ws.onerror=()=>{};ws.onclose=()=>{if(!gotWs)poll()};setTimeout(()=>{if(!gotWs&&ws&&ws.readyState!==1)ws.close()},2500)}catch(_){poll()}
   function poll(){if(timer)return;$('st').textContent='Polling http://'+host+'/data every '+ms+' ms';

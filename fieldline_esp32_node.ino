@@ -22,6 +22,7 @@
 #include <ESPmDNS.h>
 #include <DNSServer.h>
 #include <Preferences.h>
+#include <LittleFS.h>
 #include <ESPAsyncWebServer.h>
 #include <ArduinoJson.h>
 #include <DHT.h>
@@ -271,9 +272,18 @@ void setup() {
   if (MDNS.begin(HOSTNAME)) Serial.printf("mDNS: http://%s.local/\n", HOSTNAME);
 
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
+  DefaultHeaders::Instance().addHeader("Access-Control-Allow-Private-Network", "true");
   server.on("/data", HTTP_GET, [](AsyncWebServerRequest* r) { r->send(200, "application/json", snapshot()); });
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest* r) { r->send(200, "text/plain", "Fieldline node OK. GET /data"); });
   server.addHandler(&ws);
+  if (LittleFS.begin(false)) {
+    server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
+    Serial.println("Dashboard filesystem mounted");
+  } else {
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest* r) {
+      r->send(503, "text/plain", "Dashboard files missing. Upload the LittleFS image.");
+    });
+    Serial.println("Dashboard filesystem missing");
+  }
   server.begin();
 }
 

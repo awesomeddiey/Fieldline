@@ -19,13 +19,16 @@ the node IP after connection.
 
 The dashboard connects directly to `fieldline-node.local` over the LAN and uses
 WebSocket updates from `ws://fieldline-node.local/ws`, falling back to `GET /data`.
-There is no database or cloud realtime dependency in this path.
+There is no database or cloud realtime dependency in this path. The same
+dashboard and its images are stored in LittleFS and served directly by the ESP32
+at `http://fieldline-node.local/`, avoiding HTTPS mixed-content restrictions.
 
 Build, upload, and monitor with:
 
 ```powershell
 py -m platformio run
 py -m platformio run --target upload
+py -m platformio run --target uploadfs
 py -m platformio device monitor
 ```
 
