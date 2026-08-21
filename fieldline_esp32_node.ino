@@ -59,6 +59,8 @@ uint32_t restartAt = 0;
 const uint8_t REQ[] = {0x01, 0x03, 0x00, 0x00, 0x00, 0x07, 0x04, 0x08};
 float moisture, soilTemp, ec, ph, n, p, k, airTemp, humidity;
 bool sensorOk = false;
+bool airTempOk = false;
+bool humidityOk = false;
 
 void lcdLine(uint8_t row, const String& message) {
   if (!lcd) return;
@@ -205,9 +207,16 @@ bool readSoil() {
 
 String snapshot() {
   StaticJsonDocument<320> d;
-  d["n"] = n; d["p"] = p; d["k"] = k; d["ph"] = ph; d["ec"] = ec;
-  d["moisture"] = moisture; d["soilTemp"] = soilTemp;
-  d["airTemp"] = airTemp; d["humidity"] = humidity;
+  if (sensorOk) {
+    d["n"] = n; d["p"] = p; d["k"] = k; d["ph"] = ph; d["ec"] = ec;
+    d["moisture"] = moisture; d["soilTemp"] = soilTemp;
+  } else {
+    d["n"] = nullptr; d["p"] = nullptr; d["k"] = nullptr;
+    d["ph"] = nullptr; d["ec"] = nullptr;
+    d["moisture"] = nullptr; d["soilTemp"] = nullptr;
+  }
+  if (airTempOk) d["airTemp"] = airTemp; else d["airTemp"] = nullptr;
+  if (humidityOk) d["humidity"] = humidity; else d["humidity"] = nullptr;
   d["rssi"] = WiFi.RSSI(); d["uptime"] = millis() / 1000; d["sensorOk"] = sensorOk;
   String out; serializeJson(d, out); return out;
 }
@@ -296,8 +305,10 @@ void loop() {
     lastRead = millis();
     sensorOk = readSoil();
     float h = dht.readHumidity(), t = dht.readTemperature();
-    if (!isnan(h)) humidity = h;
-    if (!isnan(t)) airTemp = t;
+    humidityOk = !isnan(h);
+    airTempOk = !isnan(t);
+    if (humidityOk) humidity = h;
+    if (airTempOk) airTemp = t;
   }
   if (millis() - lastPush > 2000) {
     lastPush = millis();

@@ -214,15 +214,14 @@ code{font-size:10.5px;background:#f0f2f0;padding:2px 5px;border-radius:5px}
     <div class="logo" id="logo"><svg viewBox="0 0 24 24" fill="none"><path d="M3 14c4-8 10-9 18-9-1 8-6 13-14 13H3v-4z" fill="#9fcf2e"/><path d="M3 18c3-4 7-7 13-9" stroke="#2f5d1a" stroke-width="1.6" stroke-linecap="round"/></svg>fieldline</div>
     <nav class="nav"><span class="on" data-view="fields" tabindex="0">My fields</span><span data-view="analytics" tabindex="0">Analytics</span><span data-view="settings" tabindex="0">Settings</span></nav>
     <div class="search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" placeholder="Search updates, fields, metrics"></div>
-    <button class="btn" id="upgradeBtn">Upgrade</button>
-    <div class="conn" id="connBtn"><span class="dot" id="dot"></span><span id="connTxt">Demo mode</span>
+    <div class="conn" id="connBtn"><span class="dot" id="dot"></span><span id="connTxt">Connecting…</span>
       <div class="pop" id="pop">
         <div style="font-weight:600;font-size:13.5px">ESP32 connection</div>
         <label class="l">Device address on LAN</label>
         <input class="inp" id="ip" placeholder="192.168.1.50  or  fieldline-node.local">
         <label class="l">Poll interval (ms)</label>
         <input class="inp" id="ms" type="number" value="2000" min="500">
-        <div class="r"><button class="btn" id="connect">Connect</button><button class="btn ghost" id="demo">Demo</button></div>
+        <div class="r"><button class="btn" id="connect">Reconnect</button></div>
         <div class="st" id="st">Expects <code>GET http://&lt;ip&gt;/data</code> returning JSON with <code>n,p,k,ph,ec,moisture,soilTemp,airTemp,humidity</code>. Tries <code>ws://&lt;ip&gt;/ws</code> first.</div>
       </div>
     </div>
@@ -234,7 +233,7 @@ code{font-size:10.5px;background:#f0f2f0;padding:2px 5px;border-radius:5px}
     <section class="hero">
       <div class="rail" id="rail"></div>
       <div class="stage">
-        <h1 class="title" id="fieldName">Strawberry Field B<small id="sub">Node FL-02 · 7-in-1 soil probe · RS485</small></h1>
+        <h1 class="title" id="fieldName">Fieldline Sensor<small id="sub">Node ESP32-01 · 7-in-1 soil probe · RS485</small></h1>
         <div class="viz">
           <div class="rings"></div>
           <div class="field"><img src="crop.webp" alt="Field"><div class="scanline"></div></div>
@@ -259,7 +258,7 @@ code{font-size:10.5px;background:#f0f2f0;padding:2px 5px;border-radius:5px}
       </div>
 
       <div class="card npk">
-        <h3><div>NPK Analysis<span id="npkSub">Simulated signal</span></div><div class="live" id="pause" title="Pause / resume"><i></i></div></h3>
+        <h3><div>NPK Analysis<span id="npkSub">Waiting for sensor</span></div><div class="live" id="pause" title="Pause / resume"><i></i></div></h3>
         <div class="wave" id="wave"></div>
         <div class="npkrow">
           <div data-m="n">Nitrogen<b><span id="nN">—</span><em>mg/kg</em></b></div>
@@ -293,6 +292,11 @@ const fmt=(v,d=0)=>v==null||isNaN(v)?'—':Number(v).toFixed(d);
 const toast=m=>{const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),2400)};
 const store={get(k,d){try{const v=localStorage.getItem('fl.'+k);return v==null?d:JSON.parse(v)}catch(_){return d}},set(k,v){try{localStorage.setItem('fl.'+k,JSON.stringify(v))}catch(_){}}};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const LIVE_DATA_VERSION='live-only-1';
+if(store.get('dataVersion','')!==LIVE_DATA_VERSION){
+  try{['log','unread','fields','cur'].forEach(k=>localStorage.removeItem('fl.'+k))}catch(_){}
+  store.set('dataVersion',LIVE_DATA_VERSION);
+}
 
 /* ---------- metrics ---------- */
 const METRICS={
@@ -321,12 +325,10 @@ const TIPS={
 };
 const EMOJI={strawberry:'🍓',maize:'🌽',tomato:'🍅',wheat:'🌾',default:'🌱'};
 let fields=store.get('fields',[
-  {name:'Maize Field A',crop:'maize',node:'FL-01'},
-  {name:'Strawberry Field B',crop:'strawberry',node:'FL-02'}]);
-let cur=store.get('cur',1); if(cur>=fields.length)cur=0;
-const sims={}, hist={};
-const seedSim=()=>({n:90+Math.random()*80,p:30+Math.random()*40,k:120+Math.random()*100,ph:5.8+Math.random()*.8,ec:600+Math.random()*500,moisture:35+Math.random()*30,soilTemp:18+Math.random()*6,airTemp:22+Math.random()*6,humidity:50+Math.random()*25});
-function ensureField(i){if(!sims[i])sims[i]=seedSim();if(!hist[i]){hist[i]={};for(const k in METRICS)hist[i][k]=[]}}
+  {name:'Fieldline Sensor',crop:'default',node:'ESP32-01'}]);
+let cur=store.get('cur',0); if(cur>=fields.length)cur=0;
+const hist={};
+function ensureField(i){if(!hist[i]){hist[i]={};for(const k in METRICS)hist[i][k]=[]}}
 const MAXAGE=900e3;
 function push(i,d){ensureField(i);const t=Date.now();for(const k in METRICS){if(d[k]==null)continue;const a=hist[i][k];a.push({t,v:d[k]});while(a.length&&t-a[0].t>MAXAGE)a.shift()}}
 
@@ -360,7 +362,7 @@ $('gauges').innerHTML=GAUGE_KEYS.map(k=>`<div class="g" data-m="${k}" id="g_${k}
 $('metric').innerHTML=Object.keys(METRICS).map(k=>`<option value="${k}">${METRICS[k].label}</option>`).join('');
 let metric=store.get('metric','moisture'); $('metric').value=metric; let range=store.get('range',60); $('range').value=range;
 function renderRail(){$('rail').innerHTML=fields.map((f,i)=>`<div class="thumb ${i===cur?'sel':''}" data-i="${i}" title="${esc(f.name)}" tabindex="0">${EMOJI[f.crop]||'🌱'}<span class="x" data-del="${i}" title="Remove">×</span></div>`).join('')+`<div class="thumb add" id="addField" tabindex="0">＋<span>Add</span></div>`}
-function selectField(i){cur=i;store.set('cur',cur);ensureField(i);const f=fields[i];$('fieldName').firstChild.textContent=f.name;$('sub').textContent=`Node ${f.node} · 7-in-1 soil probe · RS485`;$('tipFor').textContent='For '+(f.crop==='default'?'your crop':f.crop);tipI=0;showTip();renderRail();if(mode==='demo')render(simulate());else drawChart()}
+function selectField(i){cur=i;store.set('cur',cur);ensureField(i);const f=fields[i];$('fieldName').firstChild.textContent=f.name;$('sub').textContent=`Node ${f.node} · 7-in-1 soil probe · RS485`;$('tipFor').textContent='For '+(f.crop==='default'?'your crop':f.crop);tipI=0;showTip();renderRail();drawChart()}
 $('rail').addEventListener('click',e=>{
   const del=e.target.closest('[data-del]');
   if(del){const i=+del.dataset.del;if(fields.length===1)return toast('Keep at least one field');openModal(`<h2>Remove ${esc(fields[i].name)}? <span class="x" data-close>×</span></h2><p>Its alerts stay in the log.</p><div class="r"><button class="btn" id="mDel">Remove</button><button class="btn ghost" data-close>Cancel</button></div>`);$('mDel').onclick=()=>{fields.splice(i,1);store.set('fields',fields);if(cur>=fields.length)cur=fields.length-1;closeModal();selectField(cur);toast('Field removed')};return}
@@ -369,9 +371,22 @@ $('rail').addEventListener('click',e=>{
 $('rail').addEventListener('keydown',e=>{if(e.key==='Enter')e.target.click()});
 
 /* ---------- render ---------- */
-let mode='demo',paused=false,timer=null,ws=null,lastData=null;
+let mode='connecting',paused=false,timer=null,ws=null,lastData=null;
 const tempOut=(v)=>store.get('f',false)?v*9/5+32:v;
+function renderNoSignal(d){
+  lastData=d;
+  ['tN','tP','tK','nN','nP','nK'].forEach(id=>$(id).textContent='—');
+  const useF=store.get('f',false);
+  GAUGE_KEYS.forEach(k=>{const isT=k==='soilTemp'||k==='airTemp';$('v_'+k).textContent='—';$('g_'+k).querySelector('em').textContent=isT?(useF?'°F':'°C'):(METRICS[k].unit||'pH');$('g_'+k).className='g '+(k===metric?'active':'');$('b_'+k).style.strokeDashoffset=213.6});
+  [...wave.children].forEach(b=>b.style.height='6px');
+  $('rssi').textContent=d&&d.rssi!=null?`RSSI ${d.rssi} dBm`:'RSSI n/a';
+  $('last').textContent='No sensor data received';
+  $('scanTxt').textContent='No sensor signal';
+  setMode('nosignal','No sensor signal');
+  drawChart();
+}
 function render(d){
+  if(!d||d.sensorOk!==true){renderNoSignal(d);return}
   lastData=d;push(cur,d);
   const set=(id,v,dec)=>{$(id).textContent=fmt(v,dec)};
   set('tN',d.n);set('tP',d.p);set('tK',d.k);set('nN',d.n);set('nP',d.p);set('nK',d.k);
@@ -381,7 +396,7 @@ function render(d){
   for(let i=0;i<bars.length;i++){const base=(i<15?d.n/300:i<30?d.p/200:d.k/450)*40;bars[i].style.height=(6+base*(0.55+0.45*Math.abs(Math.sin(t+i*0.55))))+'px'}
   $('rssi').textContent=d.rssi!=null?`RSSI ${d.rssi} dBm`:'RSSI n/a';
   $('last').textContent='updated '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  $('scanTxt').textContent=paused?'Paused':mode==='live'?'Live from ESP32':'Simulating';
+  $('scanTxt').textContent=paused?'Paused':'Live from ESP32';
   drawChart();alerts(d);
 }
 /* chart */
@@ -413,30 +428,25 @@ $('metric').onchange=e=>setMetric(e.target.value);
 $('range').onchange=e=>{range=+e.target.value;store.set('range',range);drawChart()};
 document.querySelectorAll('[data-m]').forEach(el=>el.addEventListener('click',()=>setMetric(el.dataset.m,true)));
 
-/* ---------- data sources ---------- */
-function simulate(){ensureField(cur);const s=sims[cur];const j=(k,a,lo,hi)=>{s[k]=Math.max(lo,Math.min(hi,s[k]+(Math.random()-.5)*a))};
-  j('n',4,10,300);j('p',2,5,200);j('k',5,20,450);j('ph',.05,4.5,8.5);j('ec',30,100,3000);j('moisture',1.5,15,95);j('soilTemp',.3,5,40);j('airTemp',.4,0,45);j('humidity',1.5,20,100);
-  if(Math.random()<.02)s.moisture-=12;if(s.moisture<25&&Math.random()<.08)s.moisture+=18;
-  return {...s,rssi:-55-Math.round(Math.random()*8)}}
+/* ---------- live data source ---------- */
 function normalize(j){const g=(...k)=>{for(const x of k){if(j[x]!=null)return +j[x]}return null};
-  return {n:g('n','N','nitrogen'),p:g('p','P','phosphorus'),k:g('k','K','potassium'),ph:g('ph','pH','PH'),ec:g('ec','EC','conductivity'),moisture:g('moisture','soil_moisture','soilMoisture'),soilTemp:g('soilTemp','soil_temp','temperature','temp'),airTemp:g('airTemp','air_temp'),humidity:g('humidity','air_humidity','rh'),rssi:g('rssi','RSSI')}}
-function setMode(m,txt){mode=m;$('dot').className='dot '+(m==='live'?'on':m==='error'?'off':'');$('connTxt').textContent=txt;$('npkSub').textContent=m==='live'?'Live from node':'Simulated signal'}
+  return {sensorOk:j.sensorOk===true,n:g('n','N','nitrogen'),p:g('p','P','phosphorus'),k:g('k','K','potassium'),ph:g('ph','pH','PH'),ec:g('ec','EC','conductivity'),moisture:g('moisture','soil_moisture','soilMoisture'),soilTemp:g('soilTemp','soil_temp','temperature','temp'),airTemp:g('airTemp','air_temp'),humidity:g('humidity','air_humidity','rh'),rssi:g('rssi','RSSI')}}
+function setMode(m,txt){mode=m;$('dot').className='dot '+(m==='live'?'on':(m==='error'||m==='nosignal')?'off':'');$('connTxt').textContent=txt;$('npkSub').textContent=m==='live'?'Live from node':m==='nosignal'?'No sensor signal':m==='error'?'Node unavailable':'Waiting for sensor'}
 function stop(){clearInterval(timer);timer=null;if(ws){ws.onclose=null;ws.close();ws=null}}
-function startDemo(){stop();setMode('demo','Demo mode');render(simulate());timer=setInterval(()=>{if(!paused)render(simulate())},1500)}
 function startLive(){
   stop();const host=$('ip').value.trim().replace(/^https?:\/\//,'').replace(/\/$/,'');const ms=Math.max(500,+$('ms').value||2000);store.set('ip',host);
   if(!host)return toast('Enter the node address first');
   if(location.protocol==='https:'){$('st').innerHTML='The hosted page cannot open a plain LAN WebSocket. <a href="http://fieldline-node.local/" style="font-weight:700;color:#2f5d1a">Open the live Fieldline LAN dashboard</a> while connected to the farm Wi-Fi.';setMode('error','Open LAN dashboard');toast('Open the LAN dashboard for live readings');return}
   setMode('connecting','Connecting…');$('st').textContent='Trying WebSocket ws://'+host+'/ws …';let gotWs=false;
-  try{ws=new WebSocket('ws://'+host+'/ws');ws.onmessage=e=>{try{gotWs=true;setMode('live','Live · '+host);if(!paused)render(normalize(JSON.parse(e.data)))}catch(_){}};ws.onopen=()=>{$('st').textContent='WebSocket open. Streaming from '+host};ws.onerror=()=>{};ws.onclose=()=>{if(!gotWs)poll()};setTimeout(()=>{if(!gotWs&&ws&&ws.readyState!==1)ws.close()},2500)}catch(_){poll()}
+  try{ws=new WebSocket('ws://'+host+'/ws');ws.onmessage=e=>{try{gotWs=true;setMode('live','Live · '+host);if(!paused)render(normalize(JSON.parse(e.data)))}catch(_){}};ws.onopen=()=>{$('st').textContent='WebSocket open. Streaming from '+host};ws.onerror=()=>{};ws.onclose=()=>poll();setTimeout(()=>{if(!gotWs&&ws&&ws.readyState!==1)ws.close()},2500)}catch(_){poll()}
   function poll(){if(timer)return;$('st').textContent='Polling http://'+host+'/data every '+ms+' ms';
-    const tick=async()=>{if(paused)return;try{const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),ms*0.9);const r=await fetch('http://'+host+'/data',{signal:ctrl.signal,cache:'no-store'});clearTimeout(t);if(!r.ok)throw new Error(r.status);render(normalize(await r.json()));setMode('live','Live · '+host)}
-      catch(e){setMode('error','No response · '+host);$('st').textContent='Cannot reach '+host+'. Check the ESP32 is on the same Wi-Fi, serves /data with CORS (Access-Control-Allow-Origin: *), and that the IP is right.'}};tick();timer=setInterval(tick,ms)}
+    const tick=async()=>{if(paused)return;try{const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),ms*0.9);const r=await fetch('http://'+host+'/data',{signal:ctrl.signal,cache:'no-store'});clearTimeout(t);if(!r.ok)throw new Error(r.status);setMode('live','Live · '+host);render(normalize(await r.json()))}
+      catch(e){renderNoSignal(null);setMode('error','No response · '+host);$('st').textContent='Cannot reach '+host+'. Check the ESP32 is on the same Wi-Fi, serves /data with CORS (Access-Control-Allow-Origin: *), and that the IP is right.'}};tick();timer=setInterval(tick,ms)}
 }
 $('connBtn').addEventListener('click',e=>{if(e.target.closest('.pop'))return;$('pop').classList.toggle('open')});
 document.addEventListener('click',e=>{if(!e.target.closest('#connBtn'))$('pop').classList.remove('open')});
-$('connect').onclick=startLive;$('demo').onclick=startDemo;$('ip').value=store.get('ip','fieldline-node.local');
-$('pause').onclick=()=>{paused=!paused;$('pause').classList.toggle('paused',paused);$('scanTxt').textContent=paused?'Paused':mode==='live'?'Live from ESP32':'Simulating';toast(paused?'Readings paused':'Readings resumed')};
+$('connect').onclick=startLive;$('ip').value=store.get('ip','fieldline-node.local');
+$('pause').onclick=()=>{paused=!paused;$('pause').classList.toggle('paused',paused);$('scanTxt').textContent=paused?'Paused':mode==='live'?'Live from ESP32':'No sensor signal';toast(paused?'Readings paused':'Readings resumed')};
 
 /* ---------- tips ---------- */
 let tipI=0;function showTip(){const f=fields[cur];const arr=TIPS[f.crop]||TIPS.default;$('tipTxt').textContent=arr[tipI%arr.length]}
@@ -489,16 +499,9 @@ function openSettings(){
 }
 function applyPrefs(){$('pollen').style.display=store.get('pollen',true)?'':'none'}applyPrefs();
 
-$('upgradeBtn').onclick=()=>{const plan=store.get('plan','Free');openModal(`<h2>Plans <span class="x" data-close>×</span></h2><p>You're on <b>${plan}</b>. Upgrade to keep history, add nodes and get alerts off-site.</p><div class="plans">
-  <div class="plan"><h4>Free</h4><div class="pr">$0<small>/mo</small></div><ul><li>1 node, 1 field</li><li>15-minute history</li><li>In-browser alerts</li></ul><button class="btn ghost" disabled>${plan==='Free'?'Current':'Included'}</button></div>
-  <div class="plan hot"><h4>Grower</h4><div class="pr">$19<small>/node/mo</small></div><ul><li>Unlimited fields</li><li>12-month cloud history</li><li>SMS + WhatsApp alerts</li><li>CSV & API export</li></ul><button class="btn" data-plan="Grower" ${plan==='Grower'?'disabled':''}>${plan==='Grower'?'Current plan':'Start 14-day trial'}</button></div>
-  <div class="plan"><h4>Estate</h4><div class="pr">Custom</div><ul><li>Multi-farm roll-up</li><li>Agronomist dashboard</li><li>On-prem / private cloud</li><li>SLA & training</li></ul><button class="btn ghost" data-plan="Estate">Talk to sales</button></div></div>`);
-  document.querySelectorAll('[data-plan]').forEach(b=>b.onclick=()=>{const p=b.dataset.plan;if(p==='Estate'){location.href='mailto:gandanzarae48@gmail.com?subject=Fieldline%20Estate%20plan&body=Farm%20name%3A%0ANumber%20of%20nodes%3A%0ALocation%3A';return}store.set('plan',p);$('upgradeBtn').textContent=p;closeModal();toast(`${p} trial started — 14 days`);addRow('growth',`${p} trial activated`,'Account','',true)})};
-if(store.get('plan','Free')!=='Free')$('upgradeBtn').textContent=store.get('plan');
-
 $('bell').onclick=()=>{unread=0;store.set('unread',0);renderBadge();openModal(`<h2>Alerts <span class="x" data-close>×</span></h2><p>${log.length} in the log · newest first</p><div class="list" style="max-height:420px">${log.slice(0,60).map(rowHTML).join('')||'<div class="empty">No alerts yet</div>'}</div>`);$('modal').querySelectorAll('.row').forEach(r=>r.onclick=()=>openUpdate(r.dataset.t))};
 $('seeAll').onclick=()=>$('bell').click();
-$('avatarBtn').onclick=()=>{openModal(`<h2>Account <span class="x" data-close>×</span></h2><div class="kv"><span>Name</span><span>Awesome</span><span>Email</span><span>gandanzarae48@gmail.com</span><span>Plan</span><span>${esc(store.get('plan','Free'))}</span><span>Fields</span><span>${fields.length}</span><span>Data source</span><span>${mode==='live'?'ESP32 · '+store.get('ip'):'Demo simulation'}</span></div><div class="r"><button class="btn" id="aPlan">Manage plan</button><button class="btn ghost" id="aSet">Settings</button><button class="btn ghost" id="aOut">Sign out</button></div>`);$('aPlan').onclick=()=>{closeModal();$('upgradeBtn').click()};$('aSet').onclick=()=>goView('settings');$('aOut').onclick=()=>{closeModal();toast('Signed out (demo)')}};
+$('avatarBtn').onclick=()=>{openModal(`<h2>Fieldline node <span class="x" data-close>×</span></h2><div class="kv"><span>Address</span><span>${esc(store.get('ip','fieldline-node.local'))}</span><span>Fields</span><span>${fields.length}</span><span>Connection</span><span>${mode==='live'?'ESP32 connected':mode==='nosignal'?'Connected · no sensor signal':'Node unavailable'}</span><span>Sensor</span><span>${lastData&&lastData.sensorOk?'Signal active':'No sensor signal'}</span></div><div class="r"><button class="btn ghost" id="aSet">Settings</button><button class="btn ghost" data-close>Close</button></div>`);$('aSet').onclick=()=>{closeModal();goView('settings')}};
 
 /* search */
 $('q').addEventListener('input',renderList);
@@ -506,8 +509,6 @@ $('q').addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=$('q').v
 
 /* ---------- boot ---------- */
 renderList();renderBadge();
-if(!log.length){addRow('npk','Probe calibration verified','Calibrated','grey',true);addRow('growth','Node FL-02 online · firmware 1.0.3','Online','',true)}
-fields.forEach((_,i)=>{ensureField(i);const t0=Date.now()-900e3;const save=cur;cur=i;for(let s=0;s<600;s++){const d=simulate();const t=t0+s*1500;for(const k in METRICS)hist[i][k].push({t,v:d[k]})}cur=save});
 selectField(cur);startLive();
 window.addEventListener('resize',drawChart);
 setInterval(()=>{const bars=wave.children,t=Date.now()/400;for(let i=0;i<bars.length;i++){const h=parseFloat(bars[i].style.height)||8;bars[i].style.height=(h*0.85+(6+Math.abs(Math.sin(t+i*.55))*20)*0.15)+'px'}},120);
