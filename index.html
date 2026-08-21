@@ -237,6 +237,10 @@ code{font-size:10.5px;background:#f0f2f0;padding:2px 5px;border-radius:5px}
   .growth,.npk,.tut,.updates{grid-column:1;grid-row:auto}
   .tut{min-height:150px}
   .list{max-height:320px}
+  .row{grid-template-columns:26px 1fr auto;gap:2px 10px;padding:8px 0}
+  .row .ic{grid-row:1/3}
+  .row time{grid-column:2/4;text-align:left}
+  .row .chev{display:none}
   .overlay{position:fixed;border-radius:0;z-index:60}
   .modal{padding:18px 16px;border-radius:18px}
   .modal.wide{width:96%}
@@ -448,14 +452,14 @@ document.querySelectorAll('[data-m]').forEach(el=>el.addEventListener('click',()
 function normalize(j){const g=(...k)=>{for(const x of k){if(j[x]!=null)return +j[x]}return null};
   return {n:g('n','N','nitrogen'),p:g('p','P','phosphorus'),k:g('k','K','potassium'),ph:g('ph','pH','PH'),ec:g('ec','EC','conductivity'),moisture:g('moisture','soil_moisture','soilMoisture'),soilTemp:g('soilTemp','soil_temp','temperature','temp'),rssi:g('rssi','RSSI'),sensorOk:j.sensorOk!==false,uptime:g('uptime')}}
 function setMode(m,txt){mode=m;$('dot').className='dot '+(m==='live'?'on':m==='error'?'off':'');$('connTxt').textContent=txt;$('npkSub').textContent=m==='live'?'Live from node':'Waiting for node'}
-const SERVED_BY_NODE=location.protocol==='http:'&&location.host&&!/^(localhost|127\.)/.test(location.host);
+const SERVED_LOCAL=location.protocol==='http:'&&!!location.host;  // node itself or localhost bridge
 const HTTPS_BLOCKED=location.protocol==='https:';
 const POLL_MS=2000;
-let liveHost=null,searching=false,searchTimer=null,noDataOpen=false;
-function candidates(){const c=[];if(SERVED_BY_NODE)c.push(location.host);const s=store.get('ip',null);if(s&&!c.includes(s))c.push(s);if(!c.includes('fieldline-node.local'))c.push('fieldline-node.local');return c}
+let liveHost=null,searching=false,searchTimer=null,noDataOpen=false,hadData=false;
+function candidates(){const c=[];if(SERVED_LOCAL)c.push(location.host);const s=store.get('ip',null);if(s&&!c.includes(s))c.push(s);if(!c.includes('fieldline-node.local'))c.push('fieldline-node.local');return c}
 function stop(){clearInterval(timer);timer=null;if(ws){ws.onclose=null;ws.onmessage=null;try{ws.close()}catch(_){ }ws=null}}
 function showNoData(){
-  if(noDataOpen||$('overlay').classList.contains('open'))return;noDataOpen=true;
+  if(hadData||noDataOpen||$('overlay').classList.contains('open'))return;noDataOpen=true;
   const why=HTTPS_BLOCKED
     ?'This page is served over HTTPS, so the browser blocks it from talking to an ESP32 on your local network (mixed content). Open the dashboard the node itself serves — the address on its LCD, e.g. <code>http://192.168.x.x</code> or <code>http://fieldline-node.local</code>.'
     :'No Fieldline node was found on your network. Check that the ESP32 is powered on, connected to the same Wi-Fi as this device, and shows an IP address on its LCD. This page keeps retrying automatically.';
@@ -464,6 +468,7 @@ function showNoData(){
 }
 function hideNoData(){if($('modal').dataset.nd&&$('overlay').classList.contains('open')){closeModal()}delete $('modal').dataset.nd;noDataOpen=false}
 function gotData(host,j){
+  hadData=true;
   if(liveHost!==host){liveHost=host;store.set('ip',host);addRow('growth','Node connected · '+host,'Online','',true)}
   setMode('live','Live · '+host);hideNoData();if(!paused)render(normalize(j))}
 async function probe(host,ms){const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),ms);
@@ -491,6 +496,7 @@ async function findNode(){
     if(await tryWs(host)){$('st').textContent='WebSocket stream from '+host;searching=false;return}
     try{const j=await probe(host,1800);gotData(host,j);startPoll(host);$('st').textContent='Polling http://'+host+'/data every '+POLL_MS+' ms';searching=false;return}catch(_){}
   }
+  if(liveHost||mode==='live'){searching=false;return}
   setMode('error','No sensor data');$('st').textContent='No node found. Retrying every 8 s — check power and Wi-Fi.';showNoData();
   searching=false;searchTimer=setTimeout(findNode,8000);
 }
