@@ -215,15 +215,11 @@ code{font-size:10.5px;background:#f0f2f0;padding:2px 5px;border-radius:5px}
     <nav class="nav"><span class="on" data-view="fields" tabindex="0">My fields</span><span data-view="analytics" tabindex="0">Analytics</span><span data-view="settings" tabindex="0">Settings</span></nav>
     <div class="search"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" placeholder="Search updates, fields, metrics"></div>
     <button class="btn" id="upgradeBtn">Upgrade</button>
-    <div class="conn" id="connBtn"><span class="dot" id="dot"></span><span id="connTxt">Demo mode</span>
+    <div class="conn" id="connBtn"><span class="dot" id="dot"></span><span id="connTxt">Searching…</span>
       <div class="pop" id="pop">
         <div style="font-weight:600;font-size:13.5px">ESP32 connection</div>
-        <label class="l">Device address on LAN</label>
-        <input class="inp" id="ip" placeholder="192.168.1.50  or  fieldline-node.local">
-        <label class="l">Poll interval (ms)</label>
-        <input class="inp" id="ms" type="number" value="2000" min="500">
-        <div class="r"><button class="btn" id="connect">Connect</button><button class="btn ghost" id="demo">Demo</button></div>
-        <div class="st" id="st">Expects <code>GET http://&lt;ip&gt;/data</code> returning JSON with <code>n,p,k,ph,ec,moisture,soilTemp,airTemp,humidity</code>. Tries <code>ws://&lt;ip&gt;/ws</code> first.</div>
+        <div class="st" id="st">Looking for the Fieldline node on your network…</div>
+        <div class="r"><button class="btn" id="retry">Retry now</button></div>
       </div>
     </div>
     <div class="icon" id="bell" title="Alerts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="badge" id="badge">0</span></div>
@@ -259,7 +255,7 @@ code{font-size:10.5px;background:#f0f2f0;padding:2px 5px;border-radius:5px}
       </div>
 
       <div class="card npk">
-        <h3><div>NPK Analysis<span id="npkSub">Simulated signal</span></div><div class="live" id="pause" title="Pause / resume"><i></i></div></h3>
+        <h3><div>NPK Analysis<span id="npkSub">Waiting for node</span></div><div class="live" id="pause" title="Pause / resume"><i></i></div></h3>
         <div class="wave" id="wave"></div>
         <div class="npkrow">
           <div data-m="n">Nitrogen<b><span id="nN">—</span><em>mg/kg</em></b></div>
@@ -324,9 +320,8 @@ let fields=store.get('fields',[
   {name:'Maize Field A',crop:'maize',node:'FL-01'},
   {name:'Strawberry Field B',crop:'strawberry',node:'FL-02'}]);
 let cur=store.get('cur',1); if(cur>=fields.length)cur=0;
-const sims={}, hist={};
-const seedSim=()=>({n:90+Math.random()*80,p:30+Math.random()*40,k:120+Math.random()*100,ph:5.8+Math.random()*.8,ec:600+Math.random()*500,moisture:35+Math.random()*30,soilTemp:18+Math.random()*6,airTemp:22+Math.random()*6,humidity:50+Math.random()*25});
-function ensureField(i){if(!sims[i])sims[i]=seedSim();if(!hist[i]){hist[i]={};for(const k in METRICS)hist[i][k]=[]}}
+const hist={};
+function ensureField(i){if(!hist[i]){hist[i]={};for(const k in METRICS)hist[i][k]=[]}}
 const MAXAGE=900e3;
 function push(i,d){ensureField(i);const t=Date.now();for(const k in METRICS){if(d[k]==null)continue;const a=hist[i][k];a.push({t,v:d[k]});while(a.length&&t-a[0].t>MAXAGE)a.shift()}}
 
@@ -360,7 +355,7 @@ $('gauges').innerHTML=GAUGE_KEYS.map(k=>`<div class="g" data-m="${k}" id="g_${k}
 $('metric').innerHTML=Object.keys(METRICS).map(k=>`<option value="${k}">${METRICS[k].label}</option>`).join('');
 let metric=store.get('metric','moisture'); $('metric').value=metric; let range=store.get('range',60); $('range').value=range;
 function renderRail(){$('rail').innerHTML=fields.map((f,i)=>`<div class="thumb ${i===cur?'sel':''}" data-i="${i}" title="${esc(f.name)}" tabindex="0">${EMOJI[f.crop]||'🌱'}<span class="x" data-del="${i}" title="Remove">×</span></div>`).join('')+`<div class="thumb add" id="addField" tabindex="0">＋<span>Add</span></div>`}
-function selectField(i){cur=i;store.set('cur',cur);ensureField(i);const f=fields[i];$('fieldName').firstChild.textContent=f.name;$('sub').textContent=`Node ${f.node} · 7-in-1 soil probe · RS485`;$('tipFor').textContent='For '+(f.crop==='default'?'your crop':f.crop);tipI=0;showTip();renderRail();if(mode==='demo')render(simulate());else drawChart()}
+function selectField(i){cur=i;store.set('cur',cur);ensureField(i);const f=fields[i];$('fieldName').firstChild.textContent=f.name;$('sub').textContent=`Node ${f.node} · 7-in-1 soil probe · RS485`;$('tipFor').textContent='For '+(f.crop==='default'?'your crop':f.crop);tipI=0;showTip();renderRail();drawChart()}
 $('rail').addEventListener('click',e=>{
   const del=e.target.closest('[data-del]');
   if(del){const i=+del.dataset.del;if(fields.length===1)return toast('Keep at least one field');openModal(`<h2>Remove ${esc(fields[i].name)}? <span class="x" data-close>×</span></h2><p>Its alerts stay in the log.</p><div class="r"><button class="btn" id="mDel">Remove</button><button class="btn ghost" data-close>Cancel</button></div>`);$('mDel').onclick=()=>{fields.splice(i,1);store.set('fields',fields);if(cur>=fields.length)cur=fields.length-1;closeModal();selectField(cur);toast('Field removed')};return}
@@ -369,7 +364,7 @@ $('rail').addEventListener('click',e=>{
 $('rail').addEventListener('keydown',e=>{if(e.key==='Enter')e.target.click()});
 
 /* ---------- render ---------- */
-let mode='demo',paused=false,timer=null,ws=null,lastData=null;
+let mode='connecting',paused=false,timer=null,ws=null,lastData=null;
 const tempOut=(v)=>store.get('f',false)?v*9/5+32:v;
 function render(d){
   lastData=d;push(cur,d);
@@ -381,7 +376,7 @@ function render(d){
   for(let i=0;i<bars.length;i++){const base=(i<15?d.n/300:i<30?d.p/200:d.k/450)*40;bars[i].style.height=(6+base*(0.55+0.45*Math.abs(Math.sin(t+i*0.55))))+'px'}
   $('rssi').textContent=d.rssi!=null?`RSSI ${d.rssi} dBm`:'RSSI n/a';
   $('last').textContent='updated '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  $('scanTxt').textContent=paused?'Paused':mode==='live'?(d.sensorOk===false?'Sensor not responding — check RS485 wiring':'Live from ESP32'):'Simulating';
+  $('scanTxt').textContent=paused?'Paused':mode==='live'?(d.sensorOk===false?'Sensor not responding — check RS485 wiring':'Live from ESP32'):'Searching for node';
   if(mode==='live'&&d.sensorOk===false){const k='sensor:'+cur;if(!lastAlert[k]||Date.now()-lastAlert[k]>120e3){lastAlert[k]=Date.now();addRow('npk','Soil probe not responding on RS485 (RX2/TX2)','Check wiring','red')}}
   drawChart();if(d.sensorOk!==false)alerts(d);
 }
@@ -414,32 +409,60 @@ $('metric').onchange=e=>setMetric(e.target.value);
 $('range').onchange=e=>{range=+e.target.value;store.set('range',range);drawChart()};
 document.querySelectorAll('[data-m]').forEach(el=>el.addEventListener('click',()=>setMetric(el.dataset.m,true)));
 
-/* ---------- data sources ---------- */
-function simulate(){ensureField(cur);const s=sims[cur];const j=(k,a,lo,hi)=>{s[k]=Math.max(lo,Math.min(hi,s[k]+(Math.random()-.5)*a))};
-  j('n',4,10,300);j('p',2,5,200);j('k',5,20,450);j('ph',.05,4.5,8.5);j('ec',30,100,3000);j('moisture',1.5,15,95);j('soilTemp',.3,5,40);j('airTemp',.4,0,45);j('humidity',1.5,20,100);
-  if(Math.random()<.02)s.moisture-=12;if(s.moisture<25&&Math.random()<.08)s.moisture+=18;
-  return {...s,rssi:-55-Math.round(Math.random()*8)}}
+/* ---------- data source: live only, auto-connect ---------- */
 function normalize(j){const g=(...k)=>{for(const x of k){if(j[x]!=null)return +j[x]}return null};
   return {n:g('n','N','nitrogen'),p:g('p','P','phosphorus'),k:g('k','K','potassium'),ph:g('ph','pH','PH'),ec:g('ec','EC','conductivity'),moisture:g('moisture','soil_moisture','soilMoisture'),soilTemp:g('soilTemp','soil_temp','temperature','temp'),airTemp:g('airTemp','air_temp'),humidity:g('humidity','air_humidity','rh'),rssi:g('rssi','RSSI'),sensorOk:j.sensorOk!==false,uptime:g('uptime')}}
-function setMode(m,txt){mode=m;$('dot').className='dot '+(m==='live'?'on':m==='error'?'off':'');$('connTxt').textContent=txt;$('npkSub').textContent=m==='live'?'Live from node':'Simulated signal'}
-function stop(){clearInterval(timer);timer=null;if(ws){ws.onclose=null;ws.close();ws=null}}
-function startDemo(){stop();setMode('demo','Demo mode');render(simulate());timer=setInterval(()=>{if(!paused)render(simulate())},1500)}
-function startLive(){
-  stop();const host=$('ip').value.trim().replace(/^https?:\/\//,'').replace(/\/$/,'');const ms=Math.max(500,+$('ms').value||2000);store.set('ip',host);
-  if(!host)return toast('Enter the node address first');
-  if(location.protocol==='https:'){$('st').innerHTML='This page is served over HTTPS, so the browser blocks plain <code>http://</code> calls to a LAN device (mixed content). Open the downloaded HTML file locally, or put the node behind HTTPS.';setMode('error','Blocked · HTTPS');toast('HTTPS page cannot reach a LAN device — open the local file');return}
-  setMode('connecting','Connecting…');$('st').textContent='Trying WebSocket ws://'+host+'/ws …';let gotWs=false;
-  try{ws=new WebSocket('ws://'+host+'/ws');ws.onmessage=e=>{try{gotWs=true;setMode('live','Live · '+host);if(!paused)render(normalize(JSON.parse(e.data)))}catch(_){}};ws.onopen=()=>{$('st').textContent='WebSocket open. Streaming from '+host};ws.onerror=()=>{};ws.onclose=()=>{if(!gotWs)poll()};setTimeout(()=>{if(!gotWs&&ws&&ws.readyState!==1)ws.close()},2500)}catch(_){poll()}
-  function poll(){if(timer)return;$('st').textContent='Polling http://'+host+'/data every '+ms+' ms';
-    const tick=async()=>{if(paused)return;try{const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),ms*0.9);const r=await fetch('http://'+host+'/data',{signal:ctrl.signal,cache:'no-store'});clearTimeout(t);if(!r.ok)throw new Error(r.status);render(normalize(await r.json()));fails=0;setMode('live','Live · '+host)}
-      catch(e){fails++;if(fails>=2){setMode('error','No response · '+host);$('st').textContent='Cannot reach '+host+' ('+fails+' tries). Same Wi-Fi? Try http://fieldline-node.local or check the IP on the LCD.'}}};let fails=0;const ok=tick;tick();timer=setInterval(tick,ms)}
+function setMode(m,txt){mode=m;$('dot').className='dot '+(m==='live'?'on':m==='error'?'off':'');$('connTxt').textContent=txt;$('npkSub').textContent=m==='live'?'Live from node':'Waiting for node'}
+const SERVED_BY_NODE=location.protocol==='http:'&&location.host&&!/^(localhost|127\.)/.test(location.host);
+const HTTPS_BLOCKED=location.protocol==='https:';
+const POLL_MS=2000;
+let liveHost=null,searching=false,searchTimer=null,noDataOpen=false;
+function candidates(){const c=[];if(SERVED_BY_NODE)c.push(location.host);const s=store.get('ip',null);if(s&&!c.includes(s))c.push(s);if(!c.includes('fieldline-node.local'))c.push('fieldline-node.local');return c}
+function stop(){clearInterval(timer);timer=null;if(ws){ws.onclose=null;ws.onmessage=null;try{ws.close()}catch(_){ }ws=null}}
+function showNoData(){
+  if(noDataOpen||$('overlay').classList.contains('open'))return;noDataOpen=true;
+  const why=HTTPS_BLOCKED
+    ?'This page is served over HTTPS, so the browser blocks it from talking to an ESP32 on your local network (mixed content). Open the dashboard the node itself serves — the address on its LCD, e.g. <code>http://192.168.x.x</code> or <code>http://fieldline-node.local</code>.'
+    :'No Fieldline node was found on your network. Check that the ESP32 is powered on, connected to the same Wi-Fi as this device, and shows an IP address on its LCD. This page keeps retrying automatically.';
+  openModal(`<h2>No sensor data <span class="x" data-close>×</span></h2><p style="display:block">${why}</p><div class="r"><button class="btn" id="ndRetry">Retry now</button><button class="btn ghost" data-close>Dismiss</button></div>`);
+  $('modal').dataset.nd='1';$('ndRetry').onclick=()=>{closeModal();findNode()};
+}
+function hideNoData(){if($('modal').dataset.nd&&$('overlay').classList.contains('open')){closeModal()}delete $('modal').dataset.nd;noDataOpen=false}
+function gotData(host,j){
+  if(liveHost!==host){liveHost=host;store.set('ip',host);addRow('growth','Node connected · '+host,'Online','',true)}
+  setMode('live','Live · '+host);hideNoData();if(!paused)render(normalize(j))}
+async function probe(host,ms){const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),ms);
+  try{const r=await fetch('http://'+host+'/data',{signal:ctrl.signal,cache:'no-store'});if(!r.ok)throw new Error(r.status);return await r.json()}finally{clearTimeout(t)}}
+function tryWs(host){return new Promise(res=>{let ok=false,w;
+  try{w=new WebSocket('ws://'+host+'/ws')}catch(_){return res(false)}
+  const to=setTimeout(()=>{if(!ok){try{w.close()}catch(_){ }res(false)}},2500);
+  w.onmessage=e=>{if(!ok){ok=true;clearTimeout(to);stop();ws=w;
+      w.onmessage=ev=>{try{gotData(host,JSON.parse(ev.data))}catch(_){}};
+      w.onclose=()=>{ws=null;lostConnection()};res(true)}
+    try{gotData(host,JSON.parse(e.data))}catch(_){}};
+  w.onerror=()=>{};
+  w.onclose=()=>{if(!ok){clearTimeout(to);res(false)}}})}
+function startPoll(host){stop();let fails=0;const tick=async()=>{if(paused)return;
+    try{const j=await probe(host,POLL_MS*0.9);fails=0;gotData(host,j)}
+    catch(_){if(++fails>=3)lostConnection()}};
+  tick();timer=setInterval(tick,POLL_MS)}
+function lostConnection(){stop();liveHost=null;setMode('error','Connection lost');$('st').textContent='Lost contact with the node. Searching again…';findNode()}
+async function findNode(){
+  if(searching)return;searching=true;clearTimeout(searchTimer);
+  if(HTTPS_BLOCKED){setMode('error','No sensor data');$('st').innerHTML='HTTPS pages cannot reach a LAN device. Open the dashboard served by the node itself (address on its LCD).';showNoData();searching=false;return}
+  setMode('connecting','Searching…');$('st').textContent='Looking for the Fieldline node on your network…';
+  for(const host of candidates()){
+    $('st').textContent='Trying '+host+' …';
+    if(await tryWs(host)){$('st').textContent='WebSocket stream from '+host;searching=false;return}
+    try{const j=await probe(host,1800);gotData(host,j);startPoll(host);$('st').textContent='Polling http://'+host+'/data every '+POLL_MS+' ms';searching=false;return}catch(_){}
+  }
+  setMode('error','No sensor data');$('st').textContent='No node found. Retrying every 8 s — check power and Wi-Fi.';showNoData();
+  searching=false;searchTimer=setTimeout(findNode,8000);
 }
 $('connBtn').addEventListener('click',e=>{if(e.target.closest('.pop'))return;$('pop').classList.toggle('open')});
 document.addEventListener('click',e=>{if(!e.target.closest('#connBtn'))$('pop').classList.remove('open')});
-$('connect').onclick=startLive;$('demo').onclick=startDemo;
-const SERVED_BY_NODE=location.protocol==='http:'&&location.host&&!/^(localhost|127\.)/.test(location.host);
-$('ip').value=SERVED_BY_NODE?location.host:store.get('ip','192.168.1.50');
-$('pause').onclick=()=>{paused=!paused;$('pause').classList.toggle('paused',paused);$('scanTxt').textContent=paused?'Paused':mode==='live'?'Live from ESP32':'Simulating';toast(paused?'Readings paused':'Readings resumed')};
+$('retry').onclick=()=>{if(!liveHost)findNode()};
+$('pause').onclick=()=>{paused=!paused;$('pause').classList.toggle('paused',paused);$('scanTxt').textContent=paused?'Paused':mode==='live'?'Live from ESP32':'Searching for node';toast(paused?'Readings paused':'Readings resumed')};
 
 /* ---------- tips ---------- */
 let tipI=0;function showTip(){const f=fields[cur];const arr=TIPS[f.crop]||TIPS.default;$('tipTxt').textContent=arr[tipI%arr.length]}
@@ -447,7 +470,7 @@ $('tipCard').onclick=()=>{tipI++;showTip()};
 
 /* ---------- modal / views ---------- */
 function openModal(html,wide){$('modal').innerHTML=html;$('modal').classList.toggle('wide',!!wide);$('overlay').classList.add('open');$('modal').querySelectorAll('[data-close]').forEach(x=>x.onclick=closeModal)}
-function closeModal(){$('overlay').classList.remove('open');document.querySelectorAll('.nav span').forEach(s=>s.classList.toggle('on',s.dataset.view==='fields'))}
+function closeModal(){$('overlay').classList.remove('open');delete $('modal').dataset.nd;document.querySelectorAll('.nav span').forEach(s=>s.classList.toggle('on',s.dataset.view==='fields'))}
 $('overlay').addEventListener('click',e=>{if(e.target===$('overlay'))closeModal()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
 function goView(v){document.querySelectorAll('.nav span').forEach(s=>s.classList.toggle('on',s.dataset.view===v));if(v==='fields')return $('overlay').classList.remove('open');if(v==='analytics')openAnalytics();if(v==='settings')openSettings()}
@@ -480,7 +503,7 @@ function openSettings(){
       <div class="toggle"><span>Show floating pollen</span>${sw('pollen',true)}</div>
       <div class="toggle"><span>Temperature in °F</span>${sw('f',false)}</div>
       <h5 style="margin-top:14px">Device</h5>
-      <div class="kv"><span>Node</span><span>${esc(fields[cur].node)}</span><span>Address</span><span>${esc(store.get('ip','192.168.1.50'))}</span><span>Mode</span><span>${mode}</span><span>Firmware</span><span>1.0.3</span></div>
+      <div class="kv"><span>Node</span><span>${esc(fields[cur].node)}</span><span>Address</span><span>${esc(liveHost||'auto-discovering…')}</span><span>Mode</span><span>${mode}</span><span>Firmware</span><span>1.0.3</span></div>
       <h5 style="margin-top:14px">Data</h5>
       <div class="r"><button class="btn ghost" id="clearLog">Clear update log</button><button class="btn ghost" id="resetAll">Reset everything</button></div>
     </div></div>`,true);
@@ -501,7 +524,7 @@ if(store.get('plan','Free')!=='Free')$('upgradeBtn').textContent=store.get('plan
 
 $('bell').onclick=()=>{unread=0;store.set('unread',0);renderBadge();openModal(`<h2>Alerts <span class="x" data-close>×</span></h2><p>${log.length} in the log · newest first</p><div class="list" style="max-height:420px">${log.slice(0,60).map(rowHTML).join('')||'<div class="empty">No alerts yet</div>'}</div>`);$('modal').querySelectorAll('.row').forEach(r=>r.onclick=()=>openUpdate(r.dataset.t))};
 $('seeAll').onclick=()=>$('bell').click();
-$('avatarBtn').onclick=()=>{openModal(`<h2>Account <span class="x" data-close>×</span></h2><div class="kv"><span>Name</span><span>Awesome</span><span>Email</span><span>gandanzarae48@gmail.com</span><span>Plan</span><span>${esc(store.get('plan','Free'))}</span><span>Fields</span><span>${fields.length}</span><span>Data source</span><span>${mode==='live'?'ESP32 · '+store.get('ip'):'Demo simulation'}</span></div><div class="r"><button class="btn" id="aPlan">Manage plan</button><button class="btn ghost" id="aSet">Settings</button><button class="btn ghost" id="aOut">Sign out</button></div>`);$('aPlan').onclick=()=>{closeModal();$('upgradeBtn').click()};$('aSet').onclick=()=>goView('settings');$('aOut').onclick=()=>{closeModal();toast('Signed out (demo)')}};
+$('avatarBtn').onclick=()=>{openModal(`<h2>Account <span class="x" data-close>×</span></h2><div class="kv"><span>Name</span><span>Awesome</span><span>Email</span><span>gandanzarae48@gmail.com</span><span>Plan</span><span>${esc(store.get('plan','Free'))}</span><span>Fields</span><span>${fields.length}</span><span>Data source</span><span>${mode==='live'?'ESP32 · '+liveHost:'No node connected'}</span></div><div class="r"><button class="btn" id="aPlan">Manage plan</button><button class="btn ghost" id="aSet">Settings</button><button class="btn ghost" id="aOut">Sign out</button></div>`);$('aPlan').onclick=()=>{closeModal();$('upgradeBtn').click()};$('aSet').onclick=()=>goView('settings');$('aOut').onclick=()=>{closeModal();toast('Signed out')}};
 
 /* search */
 $('q').addEventListener('input',renderList);
@@ -509,11 +532,10 @@ $('q').addEventListener('keydown',e=>{if(e.key!=='Enter')return;const q=$('q').v
 
 /* ---------- boot ---------- */
 renderList();renderBadge();
-if(!log.length){addRow('npk','Probe calibration verified','Calibrated','grey',true);addRow('growth','Node FL-02 online · firmware 1.0.3','Online','',true)}
-fields.forEach((_,i)=>{ensureField(i);const t0=Date.now()-900e3;const save=cur;cur=i;for(let s=0;s<600;s++){const d=simulate();const t=t0+s*1500;for(const k in METRICS)hist[i][k].push({t,v:d[k]})}cur=save});
-selectField(cur);if(SERVED_BY_NODE){$('ms').value=2000;startLive()}else startDemo();
+fields.forEach((_,i)=>ensureField(i));
+selectField(cur);findNode();
 window.addEventListener('resize',drawChart);
-setInterval(()=>{const bars=wave.children,t=Date.now()/400;for(let i=0;i<bars.length;i++){const h=parseFloat(bars[i].style.height)||8;bars[i].style.height=(h*0.85+(6+Math.abs(Math.sin(t+i*.55))*20)*0.15)+'px'}},120);
+setInterval(()=>{if(mode!=='live'||paused)return;const bars=wave.children,t=Date.now()/400;for(let i=0;i<bars.length;i++){const h=parseFloat(bars[i].style.height)||8;bars[i].style.height=(h*0.85+(6+Math.abs(Math.sin(t+i*.55))*20)*0.15)+'px'}},120);
 </script>
 </body>
 </html>
