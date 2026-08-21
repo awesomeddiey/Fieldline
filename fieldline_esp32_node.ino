@@ -3,7 +3,7 @@
   ─────────────────────────────────────────
   Sensor : 7-in-1 RS485 soil probe (N, P, K, pH, EC, moisture, temp)
            via auto-direction TTL↔RS485 module on UART2  → RX2 = GPIO16, TX2 = GPIO17
-  LCD    : 16x2 I2C (0x27 or 0x3F auto-detected)         → SDA = GPIO21, SCL = GPIO22
+  LCD    : 20x4 I2C (0x27 or 0x3F auto-detected)         → SDA = GPIO21, SCL = GPIO22
   D5     : LCD reset line (pulsed LOW at boot)            → GPIO5
   Wi-Fi  : first boot opens hotspot "Fieldline-Setup" — join it on your phone,
            pick your Wi-Fi, done. Credentials are stored on the chip.
@@ -93,26 +93,36 @@ void lcdInit() {
   Wire.begin(21, 22);
   for (uint8_t a : {0x27, 0x3F, 0x26, 0x20}) {
     Wire.beginTransmission(a);
-    if (Wire.endTransmission() == 0) { lcd = new LiquidCrystal_I2C(a, 16, 2); break; }
+    if (Wire.endTransmission() == 0) { lcd = new LiquidCrystal_I2C(a, 20, 4); break; }
   }
   if (lcd) { lcd->init(); lcd->backlight(); }
 }
+void lcdLine(uint8_t row, const char* txt) {
+  if (!lcd) return;
+  char b[21]; snprintf(b, 21, "%-20.20s", txt);
+  lcd->setCursor(0, row); lcd->print(b);
+}
 void lcdShow(const String& l1, const String& l2) {
   if (!lcd) return;
-  lcd->clear(); lcd->setCursor(0, 0); lcd->print(l1.substring(0, 16));
-  lcd->setCursor(0, 1); lcd->print(l2.substring(0, 16));
+  lcdLine(0, l1.c_str()); lcdLine(1, l2.c_str()); lcdLine(2, ""); lcdLine(3, "");
 }
-void lcdCycle() {
-  static uint8_t page = 0; static uint32_t t = 0;
-  if (millis() - t < 3000) return; t = millis();
-  char a[17], b[17];
-  if (!sensorOk) { lcdShow("Probe: no reply", "chk RS485 RX2/TX2"); return; }
-  switch (page++ % 4) {
-    case 0: lcdShow("Fieldline FL-02", ipStr); break;
-    case 1: snprintf(a, 17, "Moist %5.1f%%", moisture); snprintf(b, 17, "Temp %5.1fC", soilTemp); lcdShow(a, b); break;
-    case 2: snprintf(a, 17, "N%3.0f P%3.0f K%3.0f", n, p, k); lcdShow(a, "mg/kg"); break;
-    case 3: snprintf(a, 17, "pH %4.2f", ph); snprintf(b, 17, "EC %4.0f uS/cm", ec); lcdShow(a, b); break;
-  }
+String fv(float v, uint8_t dec = 0) {      // "--" when no reading
+  if (isnan(v)) return "--";
+  char b[12]; dtostrf(v, 0, dec, b); return String(b);
+}
+// One static 20x4 screen: IP / NPK / moisture-EC-humidity-temp / pH
+void lcdStatus() {
+  static uint32_t t = 0;
+  if (millis() - t < 2000) return; t = millis();
+  char l[24];
+  lcdLine(0, ("IP " + ipStr).c_str());
+  snprintf(l, 21, "N%s P%s K%s", fv(n).c_str(), fv(p).c_str(), fv(k).c_str());
+  lcdLine(1, l);
+  snprintf(l, 21, "M%s%% C%s H-- T%s", fv(moisture).c_str(), fv(ec).c_str(), fv(soilTemp).c_str());
+  lcdLine(2, l);
+  if (sensorOk) snprintf(l, 21, "pH %s  %ddBm", fv(ph, 2).c_str(), WiFi.isConnected() ? (int)WiFi.RSSI() : 0);
+  else          snprintf(l, 21, "pH --  probe offline");
+  lcdLine(3, l);
 }
 
 /* ───────── Setup ───────── */
@@ -135,7 +145,7 @@ void setup() {
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* r) {
     AsyncWebServerResponse* res = r->beginResponse(200, "text/html", INDEX_GZ, INDEX_GZ_len);
-    res->addHeader("Content-Encoding", "gzip"); res->addHeader("Cache-Control", "max-age=86400"); r->send(res); });
+    res->addHeader("Content-Encoding", "gzip"); res->addHeader("Cache-Control", "no-cache"); r->send(res); });
   server.on("/bg.webp", HTTP_GET, [](AsyncWebServerRequest* r) {
     AsyncWebServerResponse* res = r->beginResponse(200, "image/webp", BG_WEBP, BG_WEBP_len);
     res->addHeader("Cache-Control", "max-age=604800"); r->send(res); });
@@ -156,5 +166,5 @@ void loop() {
   if (millis() - lastPush > 2000) { lastPush = millis(); ws.cleanupClients(); if (ws.count()) ws.textAll(snapshot()); }
   if (WiFi.status() != WL_CONNECTED) { static uint32_t t = 0; if (millis() - t > 15000) { t = millis(); WiFi.reconnect(); } }
   else ipStr = WiFi.localIP().toString();
-  lcdCycle();
+  lcdStatus();
 }
