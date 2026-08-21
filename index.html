@@ -95,7 +95,7 @@ body::before{content:"";position:fixed;inset:0;background:linear-gradient(180deg
 @keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
 
 /* gauges */
-.gauges{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:12px 8px 10px;background:var(--glass);border-radius:var(--r);box-shadow:0 10px 30px -18px rgba(0,0,0,.3),inset 0 0 0 1px rgba(255,255,255,.7)}
+.gauges{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:12px 8px 10px;background:var(--glass);border-radius:var(--r);box-shadow:0 10px 30px -18px rgba(0,0,0,.3),inset 0 0 0 1px rgba(255,255,255,.7)}
 .g{position:relative;text-align:center;cursor:pointer;transition:.25s;border-radius:16px;padding:4px 2px 6px}
 .g:hover{background:rgba(255,255,255,.6);transform:translateY(-2px)}
 .g.active{background:rgba(201,232,92,.35)}
@@ -203,7 +203,7 @@ code{font-size:10.5px;background:#f0f2f0;padding:2px 5px;border-radius:5px}
 .kv span:nth-child(odd){color:var(--mute)}
 .toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:var(--dark);color:#fff;font-size:12.5px;padding:10px 16px;border-radius:999px;opacity:0;transition:.3s;z-index:50;pointer-events:none;max-width:80vw;text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%)}
-@media (max-width:980px){.frame{aspect-ratio:auto;min-height:0}.main{grid-template-columns:1fr}.hero{min-height:520px}.nav{display:none}.gauges{grid-template-columns:repeat(3,1fr)}.settings,.plans,.mini{grid-template-columns:1fr}}
+@media (max-width:980px){.frame{aspect-ratio:auto;min-height:0}.main{grid-template-columns:1fr}.hero{min-height:520px}.nav{display:none}.gauges{grid-template-columns:repeat(2,1fr)}.settings,.plans,.mini{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -293,16 +293,14 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 /* ---------- metrics ---------- */
 const METRICS={
   moisture:{label:'Soil moisture',unit:'%',dec:1,lo:0,hi:100,th:[35,25,75,85]},
-  humidity:{label:'Humidity',unit:'%',dec:0,lo:0,hi:100,th:[40,25,85,95]},
   soilTemp:{label:'Soil temp',unit:'°C',dec:1,lo:0,hi:45,th:[12,8,28,32]},
-  airTemp:{label:'Air temp',unit:'°C',dec:1,lo:0,hi:45,th:[10,4,30,35]},
   ph:{label:'Soil pH',unit:'',dec:2,lo:3,hi:10,th:[5.5,5.0,6.8,7.5]},
   ec:{label:'Conductivity',unit:'µS/cm',dec:0,lo:0,hi:3000,th:[300,150,1500,2500]},
   n:{label:'Nitrogen',unit:'mg/kg',dec:0,lo:0,hi:300,th:[40,20,200,300]},
   p:{label:'Phosphorus',unit:'mg/kg',dec:0,lo:0,hi:200,th:[20,10,120,200]},
   k:{label:'Potassium',unit:'mg/kg',dec:0,lo:0,hi:450,th:[80,40,300,450]},
 };
-const GAUGE_KEYS=['moisture','humidity','soilTemp','airTemp','ph','ec'];
+const GAUGE_KEYS=['moisture','soilTemp','ph','ec'];
 const savedTh=store.get('th',null);if(savedTh)for(const k in savedTh)if(METRICS[k])METRICS[k].th=savedTh[k];
 const status=(k,v)=>{const t=METRICS[k].th;if(v==null)return'';if(v<t[1]||v>t[3])return'bad';if(v<t[0]||v>t[2])return'warn';return''};
 const pct=(v,lo,hi)=>Math.max(0,Math.min(100,(v-lo)/(hi-lo)*100));
@@ -344,7 +342,6 @@ function alerts(d){
   if(d.moisture>T('moisture')[2])fire('mh',60e3,()=>addRow('moisture',`Soil saturated: ${fmt(d.moisture,1)}%`,'Hold water','grey'));
   if(d.n<T('n')[0])fire('n',120e3,()=>addRow('npk',`Nitrogen low: ${fmt(d.n)} mg/kg`,'Fertilise','red'));
   if(d.k<T('k')[0])fire('k',120e3,()=>addRow('npk',`Potassium low: ${fmt(d.k)} mg/kg`,'Fertilise','red'));
-  if(d.airTemp>T('airTemp')[2])fire('t',120e3,()=>addRow('light',`Heat stress risk: ${fmt(d.airTemp,1)}°C`,'Shade','grey'));
   if(d.ph<T('ph')[0]||d.ph>T('ph')[2])fire('ph',300e3,()=>addRow('npk',`Soil pH ${fmt(d.ph,2)} outside ${T('ph')[0]}–${T('ph')[2]}`,'Amend','grey'));
 }
 
@@ -353,7 +350,7 @@ function alerts(d){
 const wave=$('wave');for(let i=0;i<44;i++){const b=document.createElement('b');b.style.height='8px';if(i>30)b.className='lo';wave.appendChild(b)}
 $('gauges').innerHTML=GAUGE_KEYS.map(k=>`<div class="g" data-m="${k}" id="g_${k}"><svg viewBox="0 0 80 80"><circle class="tr" cx="40" cy="40" r="34"/><circle class="pr" id="b_${k}" cx="40" cy="40" r="34"/></svg><div class="gv"><span id="v_${k}">—</span><em>${METRICS[k].unit||'pH'}</em></div><div class="gl">${METRICS[k].label}</div></div>`).join('');
 $('metric').innerHTML=Object.keys(METRICS).map(k=>`<option value="${k}">${METRICS[k].label}</option>`).join('');
-let metric=store.get('metric','moisture'); $('metric').value=metric; let range=store.get('range',60); $('range').value=range;
+let metric=store.get('metric','moisture'); if(!METRICS[metric])metric='moisture'; $('metric').value=metric; let range=store.get('range',60); $('range').value=range;
 function renderRail(){$('rail').innerHTML=fields.map((f,i)=>`<div class="thumb ${i===cur?'sel':''}" data-i="${i}" title="${esc(f.name)}" tabindex="0">${EMOJI[f.crop]||'🌱'}<span class="x" data-del="${i}" title="Remove">×</span></div>`).join('')+`<div class="thumb add" id="addField" tabindex="0">＋<span>Add</span></div>`}
 function selectField(i){cur=i;store.set('cur',cur);ensureField(i);const f=fields[i];$('fieldName').firstChild.textContent=f.name;$('sub').textContent=`Node ${f.node} · 7-in-1 soil probe · RS485`;$('tipFor').textContent='For '+(f.crop==='default'?'your crop':f.crop);tipI=0;showTip();renderRail();drawChart()}
 $('rail').addEventListener('click',e=>{
@@ -371,7 +368,7 @@ function render(d){
   const set=(id,v,dec)=>{$(id).textContent=fmt(v,dec)};
   set('tN',d.n);set('tP',d.p);set('tK',d.k);set('nN',d.n);set('nP',d.p);set('nK',d.k);
   const useF=store.get('f',false);
-  GAUGE_KEYS.forEach(k=>{const m=METRICS[k];const isT=k==='soilTemp'||k==='airTemp';$('v_'+k).textContent=fmt(isT?tempOut(d[k]):d[k],m.dec);$('g_'+k).querySelector('em').textContent=isT?(useF?'°F':'°C'):(m.unit||'pH');$('g_'+k).className='g '+status(k,d[k])+(k===metric?' active':'');$('b_'+k).style.strokeDashoffset=213.6*(1-pct(d[k],m.lo,m.hi)/100)});
+  GAUGE_KEYS.forEach(k=>{const m=METRICS[k];const isT=k==='soilTemp';$('v_'+k).textContent=fmt(isT?tempOut(d[k]):d[k],m.dec);$('g_'+k).querySelector('em').textContent=isT?(useF?'°F':'°C'):(m.unit||'pH');$('g_'+k).className='g '+status(k,d[k])+(k===metric?' active':'');$('b_'+k).style.strokeDashoffset=213.6*(1-pct(d[k],m.lo,m.hi)/100)});
   const bars=wave.children,t=Date.now()/400;
   for(let i=0;i<bars.length;i++){const base=(i<15?d.n/300:i<30?d.p/200:d.k/450)*40;bars[i].style.height=(6+base*(0.55+0.45*Math.abs(Math.sin(t+i*0.55))))+'px'}
   $('rssi').textContent=d.rssi!=null?`RSSI ${d.rssi} dBm`:'RSSI n/a';
@@ -382,8 +379,8 @@ function render(d){
 }
 /* chart */
 function series(i,k,secs){ensureField(i);const now=Date.now();return hist[i][k].filter(p=>now-p.t<=secs*1000)}
-function unitOf(k){const isT=k==='soilTemp'||k==='airTemp';return isT?(store.get('f',false)?'°F':'°C'):METRICS[k].unit}
-function conv(k,v){return (k==='soilTemp'||k==='airTemp')?tempOut(v):v}
+function unitOf(k){return k==='soilTemp'?(store.get('f',false)?'°F':'°C'):METRICS[k].unit}
+function conv(k,v){return k==='soilTemp'?tempOut(v):v}
 function drawChart(){
   const m=METRICS[metric];const u=unitOf(metric);$('chartTitle').textContent=m.label+(u?' · '+u:'');
   const raw=series(cur,metric,range);const pts=raw.map(p=>({t:p.t,v:conv(metric,p.v)}));
@@ -411,7 +408,7 @@ document.querySelectorAll('[data-m]').forEach(el=>el.addEventListener('click',()
 
 /* ---------- data source: live only, auto-connect ---------- */
 function normalize(j){const g=(...k)=>{for(const x of k){if(j[x]!=null)return +j[x]}return null};
-  return {n:g('n','N','nitrogen'),p:g('p','P','phosphorus'),k:g('k','K','potassium'),ph:g('ph','pH','PH'),ec:g('ec','EC','conductivity'),moisture:g('moisture','soil_moisture','soilMoisture'),soilTemp:g('soilTemp','soil_temp','temperature','temp'),airTemp:g('airTemp','air_temp'),humidity:g('humidity','air_humidity','rh'),rssi:g('rssi','RSSI'),sensorOk:j.sensorOk!==false,uptime:g('uptime')}}
+  return {n:g('n','N','nitrogen'),p:g('p','P','phosphorus'),k:g('k','K','potassium'),ph:g('ph','pH','PH'),ec:g('ec','EC','conductivity'),moisture:g('moisture','soil_moisture','soilMoisture'),soilTemp:g('soilTemp','soil_temp','temperature','temp'),rssi:g('rssi','RSSI'),sensorOk:j.sensorOk!==false,uptime:g('uptime')}}
 function setMode(m,txt){mode=m;$('dot').className='dot '+(m==='live'?'on':m==='error'?'off':'');$('connTxt').textContent=txt;$('npkSub').textContent=m==='live'?'Live from node':'Waiting for node'}
 const SERVED_BY_NODE=location.protocol==='http:'&&location.host&&!/^(localhost|127\.)/.test(location.host);
 const HTTPS_BLOCKED=location.protocol==='https:';

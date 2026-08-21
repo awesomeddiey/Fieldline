@@ -79,7 +79,6 @@ String snapshot() {
   auto put = [&](const char* key, float v) { if (isnan(v)) d[key] = nullptr; else d[key] = v; };
   put("n", n); put("p", p); put("k", k); put("ph", ph); put("ec", ec);
   put("moisture", moisture); put("soilTemp", soilTemp);
-  d["airTemp"] = nullptr; d["humidity"] = nullptr;   // no air sensor fitted on this node
   d["sensorOk"] = sensorOk; d["sensorBaud"] = sensorBaud;
   d["rssi"] = WiFi.isConnected() ? WiFi.RSSI() : 0;
   d["uptime"] = millis() / 1000; d["fw"] = FW_VERSION; d["node"] = "FL-02";
@@ -110,7 +109,7 @@ String fv(float v, uint8_t dec = 0) {      // "--" when no reading
   if (isnan(v)) return "--";
   char b[12]; dtostrf(v, 0, dec, b); return String(b);
 }
-// One static 20x4 screen: IP / NPK / moisture-EC-humidity-temp / pH
+// One static 20x4 screen: IP / NPK / moisture-EC-temp / pH
 void lcdStatus() {
   static uint32_t t = 0;
   if (millis() - t < 2000) return; t = millis();
@@ -118,7 +117,7 @@ void lcdStatus() {
   lcdLine(0, ("IP " + ipStr).c_str());
   snprintf(l, 21, "N%s P%s K%s", fv(n).c_str(), fv(p).c_str(), fv(k).c_str());
   lcdLine(1, l);
-  snprintf(l, 21, "M%s%% C%s H-- T%s", fv(moisture).c_str(), fv(ec).c_str(), fv(soilTemp).c_str());
+  snprintf(l, 21, "M%s%% C%s T%sC", fv(moisture).c_str(), fv(ec).c_str(), fv(soilTemp, 1).c_str());
   lcdLine(2, l);
   if (sensorOk) snprintf(l, 21, "pH %s  %ddBm", fv(ph, 2).c_str(), WiFi.isConnected() ? (int)WiFi.RSSI() : 0);
   else          snprintf(l, 21, "pH --  probe offline");
